@@ -12,7 +12,7 @@
 void usage_message();
 void parse_args(int argc, char *argv[]);
 int parse_int(char *arg);
-int check_tags(char *arg);
+int check_tags(char *arg, char *p_tag);
 void update_parts(char tag, int val);
 void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
 void update_verbosity();

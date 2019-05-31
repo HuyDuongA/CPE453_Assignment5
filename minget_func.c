@@ -23,7 +23,8 @@ void usage_message() {
 
 /* Parses out the command line arguments given */
 void parse_args(int argc, char *argv[]) {
-	int check_next;
+	int check_next = 0, val;
+	char p_tag;
 	char* imgfile = NULL;
 	char* mpath = NULL;
 	char* hpath = NULL;
@@ -34,15 +35,20 @@ void parse_args(int argc, char *argv[]) {
 		usage_message();
 	}
 	
-	while (i < argc)
+	/*while (i < argc)*/
+	for (i = 1; i < argc; i++)
 	{
-		if (argv[i][0] == '-')
+		if (check_next) {
+			val = parse_int(argv[i]);
+			/*printf("before update in parse_args: %c, %d\n", argv[i][1], val);*/
+			update_parts(p_tag, val);
+			check_next = 0;
+		}
+			
+		else if (argv[i][0] == '-')
 		{
-			check_next = check_tags(argv[i] + 1);
-			if (check_next) {
-				i++;
-				parse_int(argv[i]);
-			}
+			check_next = check_tags(argv[i] + 1, &p_tag);
+			/*printf("p_tag: %c, check_next: %d\n", p_tag, check_next);*/
 		}
 
 		else
@@ -50,7 +56,7 @@ void parse_args(int argc, char *argv[]) {
 			update_paths(&imgfile, &mpath, &hpath, argv[i]);
 		}
 		
-		i++;
+		/*i++;*/
 	}
 	
 	print_opts(imgfile, mpath, hpath);
@@ -67,18 +73,20 @@ void print_opts(char *imgfile, char *mpath, char *hpath) {
 }
 
 /* Updates argument values based on what is not defined yet */
-int check_tags(char *arg) {
+int check_tags(char *arg, char *p_tag) {
 	int val;
 	int i = 0;
 	
-	for (i = 0; i < strlen(arg); i++) {
+	while (i < strlen(arg)) {
 		if (arg[i] == 'p' || arg[i] == 's') {
 			if (arg[i + 1] == '\0') {
+				*p_tag = arg[i];
 				return 1;
 			}
 			
 			val = parse_int(arg + i + 1);
 			update_parts(arg[i], val);
+			i++;
 		}
 		
 		else if(arg[i] == 'v') {
@@ -92,18 +100,27 @@ int check_tags(char *arg) {
 		else {
 			invalid_opt_err(arg[i]);
 		}
+		
+		i++;
 	}
 	
 	return 0;
 }
 
 int parse_int(char *arg) {
-	int val, stat;
+	int val;
 	
-	stat = sscanf(arg, "%d", &val);
-	if (stat == EOF) {
-		printf("%s: badly formed integer.\n", arg);
-		usage_message();
+	if (strcmp(arg, "0") == 0) {
+		val = 0;
+	}
+	
+	else {
+		val = atoi(arg);
+		
+		if (val == 0) {
+			printf("%s: badly formed integer.\n", arg);
+			usage_message();
+		}
 	}
 		
 	return val;
