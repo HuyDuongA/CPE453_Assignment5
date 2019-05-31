@@ -1,8 +1,8 @@
 #include "minget.h"
 
 char *prog;
-int partitions = NULL;
-int subpartitions = NULL;
+int partitions = -1;
+int subpartitions = -1;
 int v_tag = 0;
 
 /* Prints out the usage help message to stdout and exits*/
@@ -24,9 +24,9 @@ void usage_message() {
 /* Parses out the command line arguments given */
 void parse_args(int argc, char *argv[]) {
 	int check_next;
-	char* imgfile == NULL;
-	char* mpath == NULL;
-	char* hpath == NULL;
+	char* imgfile = NULL;
+	char* mpath = NULL;
+	char* hpath = NULL;
 	int i = 1;
 	
 	prog = argv[0];
@@ -38,7 +38,7 @@ void parse_args(int argc, char *argv[]) {
 	{
 		if (argv[i][0] == '-')
 		{
-			check_next = check_tags(argv[i][1]);
+			check_next = check_tags(argv[i] + 1);
 			if (check_next) {
 				i++;
 				parse_int(argv[i]);
@@ -47,7 +47,7 @@ void parse_args(int argc, char *argv[]) {
 
 		else
 		{
-			update_paths(&imgfile, &mpath, &hpath, argv[i], argv[0]);
+			update_paths(&imgfile, &mpath, &hpath, argv[i]);
 		}
 		
 		i++;
@@ -68,11 +68,12 @@ void print_opts(char *imgfile, char *mpath, char *hpath) {
 
 /* Updates argument values based on what is not defined yet */
 int check_tags(char *arg) {
-	int val, stat;
+	int val;
+	int i = 0;
 	
-	for (int i = 0; i < strlen(arg); i++) {
+	for (i = 0; i < strlen(arg); i++) {
 		if (arg[i] == 'p' || arg[i] == 's') {
-			if (arg[i + 1]) == '\0') {
+			if (arg[i + 1] == '\0') {
 				return 1;
 			}
 			
@@ -92,6 +93,8 @@ int check_tags(char *arg) {
 			invalid_opt_err(arg[i]);
 		}
 	}
+	
+	return 0;
 }
 
 int parse_int(char *arg) {
@@ -113,14 +116,14 @@ void update_verbosity() {
 
 void update_parts(char tag, int val) {
 	if (tag == 'p') {
-		if (partitions == NULL)
+		if (partitions == -1)
 			partitions = val;
 		else
 			mult_part_err(tag);
 	}
 	
 	else {
-		if (subpartitions == NULL)
+		if (subpartitions == -1)
 			subpartitions = val;
 		else
 			mult_part_err(tag);
@@ -146,12 +149,12 @@ void update_paths(char **imgfile, char **mpath, char **hpath, char *arg){
 		*imgfile = arg;
 	}
 	
-	else if (*minixpath == NULL) {
-		*minixpath == arg;
+	else if (*mpath == NULL) {
+		*mpath = arg;
 	}
 	
-	else if (*hostpath == NULL) {
-		*hostpath == arg;
+	else if (*hpath == NULL) {
+		*hpath = arg;
 	}
 	
 	else {
