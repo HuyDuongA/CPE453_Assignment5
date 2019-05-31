@@ -1,8 +1,9 @@
 #include "minget.h"
 
 char *prog;
-int partitions;
-int subpartitions;
+int partitions = NULL;
+int subpartitions = NULL;
+int v_tag = 0;
 
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
@@ -21,7 +22,7 @@ void usage_message() {
 }
 
 /* Parses out the command line arguments given */
-void parseArgs(int argc, char *argv[]) {
+void parse_args(int argc, char *argv[]) {
 	int check_next;
 	char* imgfile == NULL;
 	char* mpath == NULL;
@@ -51,19 +52,45 @@ void parseArgs(int argc, char *argv[]) {
 		
 		i++;
 	}
+	
+	print_opts(imgfile, mpath, hpath);
+}
+
+void print_opts(char *imgfile, char *mpath, char *hpath) {
+	printf("\nOptions:\n");
+	printf("  opt->part      %d\n", partitions);
+	printf("  opt->subpart   %d\n", subpartitions);
+	printf("  opt->imagefile %s\n", imgfile);
+	printf("  opt->srcpath   %s\n", mpath);
+	printf("  opt->dstpath   %s\n", hpath);
+	printf("\n  verbosity-> %d\n", v_tag);
 }
 
 /* Updates argument values based on what is not defined yet */
 int check_tags(char *arg) {
 	int val, stat;
 	
-	if (arg[0] == 'p' || arg[0] == 's') {
-		if (arg[1]) == '\0') {
-			return 1;
+	for (int i = 0; i < strlen(arg); i++) {
+		if (arg[i] == 'p' || arg[i] == 's') {
+			if (arg[i + 1]) == '\0') {
+				return 1;
+			}
+			
+			val = parse_int(arg + i + 1);
+			update_parts(arg[i], val);
 		}
 		
-		val = parse_int(arg + 1);
-		update_parts(arg[0], val);
+		else if(arg[i] == 'v') {
+			update_verbosity();
+		}
+		
+		else if (arg[i] == 'h') {
+			usage_message();
+		}
+		
+		else {
+			invalid_opt_err(arg[i]);
+		}
 	}
 }
 
@@ -77,6 +104,11 @@ int parse_int(char *arg) {
 	}
 		
 	return val;
+}
+
+void update_verbosity() {
+	if (v_tag < 2)
+		v_tag++;
 }
 
 void update_parts(char tag, int val) {
@@ -95,7 +127,7 @@ void update_parts(char tag, int val) {
 	}
 }
 
-void invalid_opt_err (char opt) {
+void invalid_opt_err(char opt) {
 	printf("%s: invalid option -- '%c'\n", prog, opt);
 }
 

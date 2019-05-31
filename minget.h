@@ -10,12 +10,14 @@
 
 /* Prints out the usage help message to stdout */
 void usage_message();
-void parseArgs(int argc, char *argv[]);
-int check_tags(char *arg);
+void parse_args(int argc, char *argv[]);
 int parse_int(char *arg);
+int check_tags(char *arg);
 void update_parts(char tag, int val);
+void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
+void update_verbosity();
 void invalid_opt_err (char opt);
 void mult_part_err(char tag);
-void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
+void print_opts(char *imgfile, char *mpath, char *hpath);
 
 #endif
