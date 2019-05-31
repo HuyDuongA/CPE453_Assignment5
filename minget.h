@@ -16,6 +16,7 @@ int check_tags(char *arg, char *p_tag);
 void update_parts(char tag, int val);
 void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
 void update_verbosity();
+void range_part_err(char tag, int val);
 void invalid_opt_err (char opt);
 void mult_part_err(char tag);
 void print_opts(char *imgfile, char *mpath, char *hpath);

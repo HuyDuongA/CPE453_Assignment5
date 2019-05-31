@@ -132,6 +132,9 @@ void update_verbosity() {
 }
 
 void update_parts(char tag, int val) {
+	if (val > 3 || val < 0)
+		range_part_err(tag, val);
+	
 	if (tag == 'p') {
 		if (partitions == -1)
 			partitions = val;
@@ -145,6 +148,15 @@ void update_parts(char tag, int val) {
 		else
 			mult_part_err(tag);
 	}
+}
+
+void range_part_err(char tag, int val) {
+	if (tag == 'p')
+		printf("Partition %d out of range.  Must be 0..3.\n", val);
+	else
+		printf("Subpartition %d out of range.  Must be 0..3.\n", val);
+	
+	usage_message();
 }
 
 void invalid_opt_err(char opt) {
