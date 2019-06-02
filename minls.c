@@ -1,3 +1,6 @@
-int main(int argc, char *argv[]){
-    return 0;
+#include "minls.h"
+
+int main(int argc, char *argv[]) {
+	parse_args(argc, argv);
+	return 0;
 }
