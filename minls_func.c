@@ -9,7 +9,7 @@ static int v_flag = 0;
 void minls(char* imgfile, char* mpath) {
 	FILE *fp;
 	
-	fp = fopen("imgfile"
+	fp = fopen("imgfile", "r");
 }
 
 
