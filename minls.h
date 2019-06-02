@@ -9,6 +9,8 @@
 #define MINIX_MAGIC_NUM 0x4D5A
 #define INODE_B_SIZE 64
 #define DIRENT_B_SIZE 64
+#define SECTOR_SIZE 512
+#define S_BLOCK_OFFSET 1024
 
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE 199309L
@@ -79,6 +81,7 @@ void update_paths(char **imgfile, char **mpath, char *arg);
 void update_parts(char flag, int val);
 void update_verbosity();
 void check_parts();
+void check_imgfile(char* imgfile);
 void range_part_err(char flag, int val);
 void mult_part_err(char flag);
 void usage_message();

@@ -12,7 +12,9 @@ void parse_file_sys(FILE *fp){
 
 /* ============ Functions for accessing image info ============ */
 void minls(char* imgfile, char* mpath) {
+	FILE *fp;
 	
+	fp = fopen("imgfile", "r");
 }
 
 /* ============ Functions for parsing command line arguments ============ */
@@ -52,6 +54,7 @@ void parse_args(int argc, char *argv[]) {
     }
 	
 	check_parts();
+	check_imgfile(imgfile);
 	print_opts(imgfile, mpath);
 }
 
@@ -120,6 +123,13 @@ void update_verbosity() {
 void check_parts() {
 	if (partitions < 0 && subpartitions >= 0) {
 		printf("Cannot have a subpartition without a partition.\n");
+		usage_message();
+	}
+}
+
+/* Checks if an image file is specified */
+void check_imgfile(char* imgfile) {
+	if (imgfile == NULL) {
 		usage_message();
 	}
 }
