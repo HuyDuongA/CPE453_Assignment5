@@ -4,6 +4,11 @@ static char *prog;
 static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
+/* ============ Functions for no partition nor subpartition === */
+void parse_file_sys(FILE *fp){
+    
+    get_supper_block(start_addr + 1024)
+}
 
 /* ============ Functions for accessing image info ============ */
 void minls(char* imgfile, char* mpath) {
