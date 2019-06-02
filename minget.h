@@ -11,14 +11,12 @@
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);
 int parse_int(char *arg);
-int check_tags(char *arg, char *p_tag);
-void check_parts();
-void update_parts(char tag, int val);
 void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
+void update_parts(char flag, int val);
 void update_verbosity();
-void range_part_err(char tag, int val);
-void invalid_opt_err (char opt);
-void mult_part_err(char tag);
+void check_parts();
+void range_part_err(char flag, int val);
+void mult_part_err(char flag);
 void usage_message();
 void print_opts(char *imgfile, char *mpath, char *hpath);
 
