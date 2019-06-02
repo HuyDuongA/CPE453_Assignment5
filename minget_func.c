@@ -119,6 +119,13 @@ void check_parts() {
 	}
 }
 
+/* Checks if an image file is specified */
+void check_imgfile(char* imgfile) {
+	if (imgfile == NULL) {
+		usage_message();
+	}
+}
+
 /* Error message for partitions out of range */
 void range_part_err(char flag, int val) {
 	if (flag == 'p')

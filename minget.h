@@ -79,6 +79,7 @@ void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
 void update_parts(char flag, int val);
 void update_verbosity();
 void check_parts();
+void check_imgfile(char* imgfile);
 void range_part_err(char flag, int val);
 void mult_part_err(char flag);
 void usage_message();
