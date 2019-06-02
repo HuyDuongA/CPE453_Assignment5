@@ -67,13 +67,13 @@ struct dirent {
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);
 int parse_int(char *arg);
-void update_paths(char **imgfile, char **mpath, char *arg);
+void update_paths(char **imgfile, char **mpath, char **hpath, char *arg);
 void update_parts(char flag, int val);
 void update_verbosity();
 void check_parts();
 void range_part_err(char flag, int val);
 void mult_part_err(char flag);
 void usage_message();
-void print_opts(char *imgfile, char *mpath);
+void print_opts(char *imgfile, char *mpath, char *hpath);
 
 #endif
