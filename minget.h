@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 /* Struct definition for a partition table entry */
-struct pt_entry {
+struct __attribute__ ((__packed__)) pt_entry {
 	uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
 	uint8_t start_head; 		/* Start of partition in CHS */
 	uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
@@ -26,7 +26,7 @@ struct pt_entry {
 };
 
 /* Struct definition for the superblock */
-struct superblock {
+struct __attribute__ ((__packed__)) superblock {
 	uint32_t ninodes; 		/* number of inodes in this fs */
 	uint16_t pad1; 			/* padding to line stuff up properly */
 	int16_t i_blocks; 		/* # of blocks used by inode bit map */
@@ -43,7 +43,7 @@ struct superblock {
 };
 
 /* Struct definition for a inode entry */
-struct inode {
+struct __attribute__ ((__packed__)) inode {
 	uint16_t mode;
 	uint16_t links; 	/* number of links to file */
 	uint16_t uid;
@@ -59,7 +59,7 @@ struct inode {
 };
 
 /* Struct definition for a directory entry */
-struct dirent {
+struct __attribute__ ((__packed__)) dirent {
 	uint32_t inode; 	/* inode number */
 	uint8_t name[60]; 	/* filename (nul-terminated if space available) */
 };
