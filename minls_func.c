@@ -6,7 +6,9 @@ static int subpartitions = -1;
 static int v_flag = 0;
 
 /* ============ Functions for accessing image info ============ */
-void parse_args(char* imgfile, char* mpath) {
+void minls(char* imgfile, char* mpath) {
+	
+}
 
 
 /* ============ Functions for parsing command line arguments ============ */

@@ -2,6 +2,14 @@
 #define MINLS_H
 
 #define DIRECT_ZONES 7
+#define PT_START 0x1BE
+#define PT_TYPE 0x81
+#define PT_VALID_1 0x55
+#define PT_VALID_2 0xAA
+#define MINIX_MAGIC_NUM 0x4D5A
+#define INODE_B_SIZE 64
+#define DIRENT_B_SIZE 64
+
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE 199309L
 
