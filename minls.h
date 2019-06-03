@@ -74,6 +74,8 @@ struct __attribute__ ((__packed__)) dirent {
 	uint8_t name[60]; 	/* filename (nul-terminated if space available) */
 };
 
+void minls(char* imgfile, char* mpath);
+
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);
 int parse_int(char *arg);
