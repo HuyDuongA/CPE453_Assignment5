@@ -88,5 +88,7 @@ void range_part_err(char flag, int val);
 void mult_part_err(char flag);
 void usage_message();
 void print_opts(char *imgfile, char *mpath);
+void parse_file_sys(FILE *fp);
+void print_sup_block();
 
 #endif

@@ -9,35 +9,45 @@ static struct superblock sup_block;
 /* ============ Functions for no partition nor subpartition === */
 void parse_file_sys(FILE *fp){
     /* parse supper block */ 
-    fseek(fp, S_BLOCK_OFFSET, SEEK_CUR);
-    fread(&sup_block, sizeof(sup_block), 1, fp);
+    if(fseek(fp, S_BLOCK_OFFSET, SEEK_CUR) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+    if(fread(&sup_block, sizeof(sup_block), 1, fp) == 0){
+        perror("fread");
+        exit(-1);
+    }
+    print_sup_block();
 }
 
-void print_sup_block(struct superblock *sup_block){
-    uint16_t block_size = sup_block->blocksize;
-    int16_t log_zone_size = sup_block->log_zone_size;
+void print_sup_block(){
+    uint16_t block_size = sup_block.blocksize;
+    int16_t log_zone_size = sup_block.log_zone_size;
     uint32_t zone_size = block_size * (1 << log_zone_size);
 
     printf("Superblock Contents:\n");
     printf("Stored Fields:\n");
-    printf("  ninodes %d\n", sup_block->ninodes);
-    printf("  i_blocks %d\n", sup_block->i_blocks);
-    printf("  z_blocks %d\n", sup_block->z_blocks);
-    printf("  firstdata %d\n", sup_block->firstdata);
+    printf("  ninodes %d\n", sup_block.ninodes);
+    printf("  i_blocks %d\n", sup_block.i_blocks);
+    printf("  z_blocks %d\n", sup_block.z_blocks);
+    printf("  firstdata %d\n", sup_block.firstdata);
     printf("  log_zone_size %d (zone size: %d)\n", 
-        block_size, zone_size);
-    printf("  max_file %d\n", sup_block->max_file);
-    printf("  magic %d\n", sup_block->magic);
-    printf("  zones %d\n", sup_block->zones);
-    printf("  blocksize %d\n", sup_block->blocksize);
-    printf("  subversion %d\n", sup_block->subversion);
+        log_zone_size, zone_size);
+    printf("  max_file %u\n", sup_block.max_file);
+    printf("  magic 0x%x\n", sup_block.magic);
+    printf("  zones %d\n", sup_block.zones);
+    printf("  blocksize %d\n", sup_block.blocksize);
+    printf("  subversion %d\n", sup_block.subversion);
 }
 
 /* ============ Functions for accessing image info ============ */
 void minls(char* imgfile, char* mpath) {
 	FILE *fp;
 	
-	fp = fopen("imgfile", "r");
+	if((fp = fopen(imgfile, "r")) == NULL){
+        perror("fopen");
+        exit(-1);
+    }
 	
 	if (partitions < 0 && subpartitions < 0) {
 		/* call superblock func here, pass in fp */
