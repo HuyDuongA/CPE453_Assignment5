@@ -38,7 +38,32 @@ void minls(char* imgfile, char* mpath) {
 	FILE *fp;
 	
 	fp = fopen("imgfile", "r");
+	
+	if (partitions < 0 && subpartitions < 0) {
+		/* call superblock func here, pass in fp */
+		parse_file_sys(fp);
+	}
+	
+	/*else if (partitions >= 0 && subpartitions < 0) {
+		// move fp, then call superblock func, passing in new fp 
+	}
+	
+	else {
+		// move fp, then call superblock func, passing in new fp 
+	}*/
+	
+	/*if (v_flag > 0) {
+		print_superblock();
+	}*/
 }
+
+/*FILE * get_start(FILE *fp) {
+	pt_entry part_info;
+	
+	fseek(fp, PT_START + partitions * sizeof(pt_entry), SEEK_SET);
+	fread(&pt_entry, sizeof(pt_entry), 1, fp);
+}*/
+
 
 /* ============ Functions for parsing command line arguments ============ */
 
@@ -79,6 +104,7 @@ void parse_args(int argc, char *argv[]) {
 	check_parts();
 	check_imgfile(imgfile);
 	print_opts(imgfile, mpath);
+	minls(imgfile, mpath);
 }
 
 /* Parses string argument into an int, returns int if successful */
