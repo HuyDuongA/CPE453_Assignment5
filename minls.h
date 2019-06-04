@@ -1,16 +1,41 @@
 #ifndef MINLS_H
 #define MINLS_H
 
-#define DIRECT_ZONES 7
-#define PT_START 0x1BE
-#define PT_TYPE 0x81
-#define PT_VALID_1 0x55
-#define PT_VALID_2 0xAA
+#define DIRECT_ZONES    7
+#define PT_START        0x1BE
+#define PT_TYPE         0x81
+#define PT_VALID_1      0x55
+#define PT_VALID_2      0xAA
 #define MINIX_MAGIC_NUM 0x4D5A
-#define INODE_B_SIZE 64
-#define DIRENT_B_SIZE 64
-#define SECTOR_SIZE 512
-#define S_BLOCK_OFFSET 1024
+#define INODE_B_SIZE    64
+#define DIRENT_B_SIZE   64
+#define SECTOR_SIZE     512
+#define S_BLOCK_OFFSET  1024
+
+#define TYPE_MASK       0170000
+#define REG_FILE        0100000
+#define DIRECTORY       0040000
+
+#define OW_READ_PERM    0000400
+#define OW_WRITE_PERM   0000200
+#define OW_EXEC_PERM    0000100
+#define OW_READ_INDEX   1
+#define OW_WRITE_INDEX  2
+#define OW_EXEC_INDEX   3
+
+#define G_READ_PERM     0000040
+#define G_WRITE_PERM    0000020
+#define G_EXEC_PERM     0b0000010
+#define G_READ_INDEX    4
+#define G_WRITE_INDEX   5
+#define G_EXEC_INDEX    6
+
+#define O_READ_PERM     0000004
+#define O_WRITE_PERM    0000002
+#define O_EXEC_PERM     0000001
+#define O_READ_INDEX    7
+#define O_WRITE_INDEX   8
+#define O_EXEC_INDEX    9
 
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE 199309L
@@ -22,6 +47,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <time.h>
 
 /* Struct definition for a partition table entry */
 struct __attribute__ ((__packed__)) pt_entry {
@@ -88,7 +114,21 @@ void range_part_err(char flag, int val);
 void mult_part_err(char flag);
 void usage_message();
 void print_opts(char *imgfile, char *mpath);
+
 void parse_file_sys(FILE *fp);
-void print_sup_block();
+void set_cursor_s_field(FILE *fp);
+void get_sup_block(FILE *fp);
+void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
+    uint32_t *inode_offset);
+void get_inode_info(FILE *fp, uint32_t inode_offset);
+void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
+    uint32_t inode_offset);
+void print_stored_fields();
+void print_inode();
+void convert_mode_to_string(char *perm_string);
+void get_owner_perm(char *perm_string, uint16_t mode);
+void get_group_perm(char *perm_string, uint16_t mode);
+void get_other_perm(char *perm_string, uint16_t mode);
+void print_dir();
 
 #endif

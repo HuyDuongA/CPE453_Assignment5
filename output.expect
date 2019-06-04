@@ -1,0 +1,52 @@
+
+Superblock Contents:
+Stored Fields:
+  ninodes          768
+  i_blocks           1
+  z_blocks           1
+  firstdata         16
+  log_zone_size      0 (zone size: 4096)
+  max_file  4294967295
+  magic         0x4d5a
+  zones            360
+  blocksize       4096
+  subversion         0
+Computed Fields:
+  version            3
+  firstImap          2
+  firstZmap          3
+  firstIblock        4
+  zonesize        4096
+  ptrs_per_zone   1024
+  ino_per_block     64
+  wrongended         0
+  fileent_size      64
+  max_filename      60
+  ent_per_zone      64
+
+File inode:
+  unsigned short mode         0x41ff	(drwxrwxrwx)
+  unsigned short links             3
+  unsigned short uid               2
+  unsigned short gid               2
+  uint32_t  size            384
+  uint32_t  atime    1141098157	--- Mon Feb 27 19:42:37 2006
+  uint32_t  mtime    1141098157	--- Mon Feb 27 19:42:37 2006
+  uint32_t  ctime    1141098157	--- Mon Feb 27 19:42:37 2006
+
+  Direct zones:
+              zone[0]   =         16
+              zone[1]   =          0
+              zone[2]   =          0
+              zone[3]   =          0
+              zone[4]   =          0
+              zone[5]   =          0
+              zone[6]   =          0
+   uint32_t  indirect   =          0
+   uint32_t  double     =          0
+/:
+drwxrwxrwx       384 .
+drwxrwxrwx       384 ..
+-rw-r--r--     73991 Other
+drwxr-xr-x      3200 src
+-rw-r--r--        11 Hello
