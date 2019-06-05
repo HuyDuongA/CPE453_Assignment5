@@ -5,45 +5,224 @@ static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
 static struct superblock sup_block;
-/*static struct pt_entry part_info;
-static struct pt_entry subpart_info;*/
-
+static struct inode inode_info;
+static uint32_t fs_start = 0;
 
 /* ============ Functions for no partition nor subpartition === */
 void parse_file_sys(FILE *fp){
-    /* parse supper block */ 
+    uint32_t imap_offset = 0;
+    uint32_t zmap_offset = 0;
+    uint32_t inode_offset = 0;
+
+    /* parse superblock */ 
+    get_sup_block(fp);
+
+    /* parse inode info */
+    get_offsets(&imap_offset, &zmap_offset, &inode_offset);
+    get_inode_info(fp, inode_offset);
+
+	if (v_flag > 0) {
+		print_sup_block(imap_offset, zmap_offset, inode_offset);
+	}
+}
+
+void get_sup_block(FILE *fp){
+    if(fseek(fp, fs_start, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
     if(fseek(fp, S_BLOCK_OFFSET, SEEK_CUR) < 0){
         perror("fseek");
         exit(-1);
     }
+
     if(fread(&sup_block, sizeof(sup_block), 1, fp) == 0){
-        perror("fread");
+        perror("fread reads nothing");
+        exit(-1);
+    }
+}
+
+void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
+    uint32_t *inode_offset)
+{
+   uint16_t blocksize = sup_block.blocksize;
+
+   *imap_offset = fs_start + 2 * blocksize; 
+   *zmap_offset = *imap_offset + sup_block.i_blocks * blocksize;
+   *inode_offset = *zmap_offset + sup_block.z_blocks * blocksize;
+}
+
+void get_inode_info(FILE *fp, uint32_t inode_offset){
+    if(fseek(fp, fs_start, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
+    if(fseek(fp, inode_offset, SEEK_CUR) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
+    if(fread(&inode_info, sizeof(inode_info), 1, fp) == 0){
+        perror("fread reads nothing");
         exit(-1);
     }
     
-	if (v_flag > 0) {
+	/*if (v_flag > 0) {
 		print_sup_block();
 	}
+
+    print_sup_block();*/
 }
 
-void print_sup_block(){
+void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset,
+    uint32_t inode_offset)
+{
+    print_stored_fields();
+    print_inode();
+    print_dir();
+}
+
+void print_stored_fields(){
     uint16_t block_size = sup_block.blocksize;
     int16_t log_zone_size = sup_block.log_zone_size;
     uint32_t zone_size = block_size * (1 << log_zone_size);
 
-    printf("Superblock Contents:\n");
-    printf("Stored Fields:\n");
-    printf("  ninodes %d\n", sup_block.ninodes);
-    printf("  i_blocks %d\n", sup_block.i_blocks);
-    printf("  z_blocks %d\n", sup_block.z_blocks);
-    printf("  firstdata %d\n", sup_block.firstdata);
-    printf("  log_zone_size %d (zone size: %d)\n", 
+    fprintf(stderr, "Superblock Contents:\n");
+    fprintf(stderr, "Stored Fields:\n");
+    fprintf(stderr, "  ninodes%13d\n", sup_block.ninodes);
+    fprintf(stderr, "  i_blocks%12d\n", sup_block.i_blocks);
+    fprintf(stderr, "  z_blocks%12d\n", sup_block.z_blocks);
+    fprintf(stderr, "  firstdata%11d\n", sup_block.firstdata);
+    fprintf(stderr, "  log_zone_size%7d (zone size: %d)\n", 
         log_zone_size, zone_size);
-    printf("  max_file %u\n", sup_block.max_file);
-    printf("  magic 0x%x\n", sup_block.magic);
-    printf("  zones %d\n", sup_block.zones);
-    printf("  blocksize %d\n", sup_block.blocksize);
-    printf("  subversion %d\n", sup_block.subversion);
+    fprintf(stderr, "  max_file%12u\n", sup_block.max_file);
+    fprintf(stderr, "  magic         0x""%x\n", sup_block.magic);
+    fprintf(stderr, "  zones%15d\n", sup_block.zones);
+    fprintf(stderr, "  blocksize%11d\n", sup_block.blocksize);
+    fprintf(stderr, "  subversion%10d\n", sup_block.subversion);
+}
+
+void print_inode(){
+    char perm[11] = {0};
+    time_t a_time = inode_info.atime;
+    time_t m_time = inode_info.mtime;
+    time_t c_time = inode_info.ctime;
+    int i = 0;
+
+    convert_mode_to_string(perm);
+    fprintf(stderr, "\nFile inode:\n");
+    /*TODO print mode*/
+    fprintf(stderr, "  unsigned short mode         0x"
+                    "%x\t(%s)\n", inode_info.mode, perm);
+    fprintf(stderr, "  unsigned short links%14d\n", inode_info.links);
+    fprintf(stderr, "  unsigned short uid%16d\n", inode_info.uid);
+    fprintf(stderr, "  unsigned short uid%16d\n", inode_info.gid);
+    fprintf(stderr, "  uint32_t size%15d\n", inode_info.size);
+
+    fprintf(stderr, "  uint32_t atime%14d"" --- %s", 
+        inode_info.atime, ctime(&a_time));
+    fprintf(stderr, "  uint32_t mtime%14d"" --- %s", 
+        inode_info.mtime, ctime(&m_time));
+    fprintf(stderr, "  uint32_t ctime%14d"" --- %s\n", 
+        inode_info.ctime, ctime(&c_time));
+    fprintf(stderr, "  Direct zones:\n");
+    
+    for(i = 0; i < DIRECT_ZONES; i++){
+        fprintf(stderr, "               zone[%d]  =%11d\n", 
+            i, inode_info.zone[i]);
+    }
+    fprintf(stderr, "   uint32_t indirect    =%11d\n", inode_info.indirect);
+    fprintf(stderr, "   uint32_t double      =%11d\n", 
+        inode_info.double_indirect);
+}
+
+void convert_mode_to_string(char *perm_string){
+    uint16_t mode = inode_info.mode;
+    uint16_t type_mask = mode & TYPE_MASK;
+    if(type_mask == REG_FILE){
+        perm_string[0] = '-';
+        get_owner_perm(perm_string, mode);
+        get_group_perm(perm_string, mode);
+        get_other_perm(perm_string, mode);
+
+    }
+    else if(type_mask == DIRECTORY){
+        perm_string[0] = 'd';
+        get_owner_perm(perm_string, mode);
+        get_group_perm(perm_string, mode);
+        get_other_perm(perm_string, mode);
+    }
+    else{
+        fprintf(stderr, "Unrecognized type_mask in convert_mode_to_string\n");
+        exit(-1);
+    }
+}
+
+void get_owner_perm(char *perm_string, uint16_t mode){
+    if(mode & OW_READ_PERM){
+        perm_string[OW_READ_INDEX] = 'r';
+    }
+    else{
+        perm_string[OW_READ_INDEX] = '-';
+    }
+    if(mode & OW_WRITE_PERM){
+        perm_string[OW_WRITE_INDEX] = 'w';
+    }
+    else{
+        perm_string[OW_WRITE_INDEX] = '-';
+    }
+    if(mode & OW_EXEC_PERM){
+        perm_string[OW_EXEC_INDEX] = 'x';
+    }
+    else{
+        perm_string[OW_EXEC_INDEX] = '-';
+    }
+}
+
+void get_group_perm(char *perm_string, uint16_t mode){
+    if(mode & G_READ_PERM){
+        perm_string[G_READ_INDEX] = 'r';
+    }
+    else{
+        perm_string[G_READ_INDEX] = '-';
+    }
+    if(mode & G_WRITE_PERM){
+        perm_string[G_WRITE_INDEX] = 'w';
+    }
+    else{
+        perm_string[G_WRITE_INDEX] = '-';
+    }
+    if(mode & G_EXEC_PERM){
+        perm_string[G_EXEC_INDEX] = 'x';
+    }
+    else{
+        perm_string[G_EXEC_INDEX] = '-';
+    }
+}
+
+void get_other_perm(char *perm_string, uint16_t mode){
+    if(mode & O_READ_PERM){
+        perm_string[O_READ_INDEX] = 'r';
+    }
+    else{
+        perm_string[O_READ_INDEX] = '-';
+    }
+    if(mode & O_WRITE_PERM){
+        perm_string[O_WRITE_INDEX] = 'w';
+    }
+    else{
+        perm_string[O_WRITE_INDEX] = '-';
+    }
+    if(mode & O_EXEC_PERM){
+        perm_string[O_EXEC_INDEX] = 'x';
+    }
+    else{
+        perm_string[O_EXEC_INDEX] = '-';
+    }
+}
+void print_dir(){
 }
 
 /* ============ Functions for accessing image info ============ */
@@ -261,8 +440,8 @@ void update_paths(char **imgfile, char **mpath, char *arg){
 	}
 	
 	else {
-		printf("in update_paths(), adding %s\n", arg);
-		/*usage_message();*/
+		/*printf("in update_paths(), adding %s\n", arg);*/
+		usage_message();
 	}
 }
 

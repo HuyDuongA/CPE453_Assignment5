@@ -1,0 +1,41 @@
+Superblock Contents:
+Stored Fields:
+  ninodes          768
+  i_blocks           1
+  z_blocks           1
+  firstdata         16
+  log_zone_size      0 (zone size: 4096)
+  max_file  4294967295
+  magic         0x4d5a
+  zones            360
+  blocksize       4096
+  subversion         0
+
+File inode:
+  unsigned short mode         0x41ff	(drwxrwxrwx)
+  unsigned short links             3
+  unsigned short uid               2
+  unsigned short uid               2
+  uint32_t size            384
+  uint32_t atime    1141098157 --- Mon Feb 27 19:42:37 2006
+  uint32_t mtime    1141098157 --- Mon Feb 27 19:42:37 2006
+  uint32_t ctime    1141098157 --- Mon Feb 27 19:42:37 2006
+
+  Direct zones:
+               zone[0]  =         16
+               zone[1]  =          0
+               zone[2]  =          0
+               zone[3]  =          0
+               zone[4]  =          0
+               zone[5]  =          0
+               zone[6]  =          0
+   uint32_t indirect    =          0
+   uint32_t double      =          0
+
+Options:
+  opt->part      -1
+  opt->subpart   -1
+  opt->imagefile Test/TestImage
+  opt->srcpath   (null)
+
+  verbosity-> 1
