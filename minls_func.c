@@ -216,6 +216,7 @@ void get_other_perm(char *perm_string, uint16_t mode){
     }
 }
 void print_dir(){
+    
 }
 
 /* ============ Functions for accessing image info ============ */
