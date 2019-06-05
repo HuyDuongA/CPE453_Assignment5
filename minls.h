@@ -7,6 +7,15 @@
 #define PT_VALID_1      0x55
 #define PT_VALID_2      0xAA
 #define MINIX_MAGIC_NUM 0x4D5A
+#define INODE_B_SIZE 64
+#define DIRENT_B_SIZE 64
+#define SECTOR_SIZE 512
+#define S_BLOCK_OFFSET 1024
+#define PT_VALID_CHECK_1 510
+#define INODE_B_SIZE 64
+#define DIRENT_B_SIZE 64
+#define SECTOR_SIZE 512
+#define S_BLOCK_OFFSET 1024
 #define INODE_B_SIZE    64
 #define DIRENT_B_SIZE   64
 #define SECTOR_SIZE     512
@@ -50,7 +59,7 @@
 #include <time.h>
 
 /* Struct definition for a partition table entry */
-struct __attribute__ ((__packed__)) pt_entry {
+typedef struct __attribute__ ((__packed__)) pt_entry {
 	uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
 	uint8_t start_head; 		/* Start of partition in CHS */
 	uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
@@ -59,7 +68,7 @@ struct __attribute__ ((__packed__)) pt_entry {
 	uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
 	uint32_t lFirst; 			/* First sector (LBA addressing) */
 	uint32_t size; 				/* size of partition (in sectors */
-};
+} pt_entry;
 
 /* Struct definition for the superblock */
 struct __attribute__ ((__packed__)) superblock {
@@ -101,6 +110,12 @@ struct __attribute__ ((__packed__)) dirent {
 };
 
 void minls(char* imgfile, char* mpath);
+void get_start(FILE *fp);
+void parse_pt_entry(FILE *fp, pt_entry *p, int idx);
+void check_valid_part(pt_entry *p);
+void check_valid_pt(FILE *fp);
+void print_pt_table(FILE *fp, char p_flag);
+void print_pt_entry(pt_entry *p);
 
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);
