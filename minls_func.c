@@ -5,6 +5,9 @@ static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
 static struct superblock sup_block;
+/*static struct pt_entry part_info;
+static struct pt_entry subpart_info;*/
+
 
 /* ============ Functions for no partition nor subpartition === */
 void parse_file_sys(FILE *fp){
@@ -17,7 +20,10 @@ void parse_file_sys(FILE *fp){
         perror("fread");
         exit(-1);
     }
-    print_sup_block();
+    
+	if (v_flag > 0) {
+		print_sup_block();
+	}
 }
 
 void print_sup_block(){
@@ -54,25 +60,117 @@ void minls(char* imgfile, char* mpath) {
 		parse_file_sys(fp);
 	}
 	
-	/*else if (partitions >= 0 && subpartitions < 0) {
-		// move fp, then call superblock func, passing in new fp 
-	}
-	
 	else {
-		// move fp, then call superblock func, passing in new fp 
-	}*/
-	
-	/*if (v_flag > 0) {
-		print_superblock();
-	}*/
+		/* move fp, then call superblock func, passing in new fp */
+		get_start(fp);
+		parse_file_sys(fp);
+	}
 }
 
-/*FILE * get_start(FILE *fp) {
-	pt_entry part_info;
+void get_start(FILE *fp) {
+	int start;
+	struct pt_entry part_info;
+	struct pt_entry subpart_info;
 	
-	fseek(fp, PT_START + partitions * sizeof(pt_entry), SEEK_SET);
-	fread(&pt_entry, sizeof(pt_entry), 1, fp);
-}*/
+	if (partitions >= 0) {
+		check_valid_pt(fp);
+		parse_pt_entry(fp, &part_info, partitions);
+		if (v_flag > 0) {
+			print_pt_table(fp, 'p');
+		}
+		start = part_info.lFirst * SECTOR_SIZE;
+		
+		if (subpartitions >= 0) {
+			fseek(fp, part_info.lFirst * SECTOR_SIZE, SEEK_SET);
+			check_valid_pt(fp);
+			parse_pt_entry(fp, &subpart_info, subpartitions);
+			if (v_flag > 0) {
+				print_pt_table(fp, 's');
+			}
+			start = subpart_info.lFirst * SECTOR_SIZE;
+		}
+	}
+	
+	fseek(fp, start, SEEK_SET);
+}
+
+void parse_pt_entry(FILE *fp, pt_entry *p, int idx){
+	fpos_t pos;
+	
+	fgetpos(fp, &pos);
+	fseek(fp, PT_START + (idx * sizeof(pt_entry)), SEEK_CUR);
+	fread(p, sizeof(pt_entry), 1, fp);
+	fsetpos(fp, &pos);
+	
+	check_valid_part(p);
+}
+
+void check_valid_part(pt_entry *p) {
+	/*print_pt_entry(p);*/
+	if (p->type != PT_TYPE) {
+		/* Change to stderr?? */
+		printf("Invalid pt table entry\n");
+		exit(-1);
+	}
+}
+
+void check_valid_pt(FILE *fp) {
+	uint8_t pt_check1, pt_check2;
+	fpos_t pos;
+	
+	fgetpos(fp, &pos);
+	fseek(fp, PT_VALID_CHECK_1, SEEK_CUR);
+	fread(&pt_check1, sizeof(pt_check1), 1, fp);
+	fread(&pt_check2, sizeof(pt_check2), 1, fp);
+	
+	if (pt_check1 != PT_VALID_1 || pt_check2 != PT_VALID_2) {
+		/* Change to stderr?? */
+		printf("Invalid pt table\n");
+		exit(-1);
+	}
+	
+	fsetpos(fp, &pos);
+}
+
+void print_pt_table(FILE *fp, char p_flag) {
+	struct pt_entry p_info;
+	fpos_t pos;
+	int i;
+	
+	if (p_flag == 'p')
+		printf("\nPartition table:\n");
+	else
+		printf("\nSubpartition table:\n");
+	
+	printf("       ----Start----      ------End-----\n");
+	printf("  Boot head  sec  cyl ");
+	printf("Type head  sec  cyl");
+	printf("      First       Size\n");
+	
+	fgetpos(fp, &pos);
+	fseek(fp, PT_START, SEEK_CUR);
+	for (i = 0; i < 4; i++) {
+		fread(&p_info, sizeof(pt_entry), 1, fp);
+		print_pt_entry(&p_info);
+	}
+	
+	fsetpos(fp, &pos);
+}
+
+void print_pt_entry(pt_entry *p) {
+	printf("  0x%02x ", p->bootind);
+	printf("%4d", p->start_head);
+	printf("%5u", p->start_sec_cyl[0]);
+	printf("%5u ", p->start_sec_cyl[1]);
+	
+	printf("0x%02x ", p->type);
+	printf("%4d", p->end_head);
+	printf("%5u", p->end_sec_cyl[0]);
+	printf("%5u ", p->end_sec_cyl[1]);
+	
+	printf("%10d", p->lFirst);
+	printf("%11d\n", p->size);
+}
 
 
 /* ============ Functions for parsing command line arguments ============ */
@@ -88,32 +186,45 @@ void parse_args(int argc, char *argv[]) {
 		usage_message();
 	}
 	
-	while ((flag = getopt (argc, argv, "s:p:hv")) != -1) {
+	while ((flag = getopt (argc, argv, "p:s:vh")) != -1) {
 		switch (flag){
-			case 'h':
-				usage_message();
-				break;
-			case 'v':
-				update_verbosity();
-				break;
 			case 'p':
+				/*printf("in p, optarg is %s\n", optarg);*/
 				pval = parse_int(optarg);
 				update_parts(flag, pval);
 				break;
 			case 's':
+				/*printf("in s, optarg is %s\n", optarg);*/
 				sval = parse_int(optarg);
 				update_parts(flag, sval);
+				break;
+			case 'h':
+				/*printf("in h\n");*/
+				usage_message();
+				break;
+			case 'v':
+				/*printf("in v\n");*/
+				update_verbosity();
+				break;
+			case '?':
+				/*printf("in ? (WHY!)\n");*/
 				break;
 		}
 	}
 		  
-	for(i = optind; i < argc; i++){      
-		update_paths(&imgfile, &mpath, argv[i]);
+	/*printf("optind %d\n", optind);*/
+	for(; optind < argc; optind++){    
+		/*printf("argv[%d] = %s\n", optind, argv[optind]);*/
+		update_paths(&imgfile, &mpath, argv[optind]);
     }
 	
 	check_parts();
 	check_imgfile(imgfile);
-	print_opts(imgfile, mpath);
+	
+	if (v_flag > 1) {
+		print_opts(imgfile, mpath);
+	}
+	
 	minls(imgfile, mpath);
 }
 
@@ -140,15 +251,18 @@ int parse_int(char *arg) {
 /* Updates path values from arg based on what is not defined yet */
 void update_paths(char **imgfile, char **mpath, char *arg){
 	if (*imgfile == NULL) {
+		printf("adding %s to imgfile\n", arg);
 		*imgfile = arg;
 	}
 	
 	else if (*mpath == NULL) {
+		printf("adding %s to mpath\n", arg);
 		*mpath = arg;
 	}
 	
 	else {
-		usage_message();
+		printf("in update_paths(), adding %s\n", arg);
+		/*usage_message();*/
 	}
 }
 
