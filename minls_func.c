@@ -89,7 +89,7 @@ void print_stored_fields(){
     int16_t log_zone_size = sup_block.log_zone_size;
     uint32_t zone_size = block_size * (1 << log_zone_size);
 
-    fprintf(stderr, "Superblock Contents:\n");
+    fprintf(stderr, "\nSuperblock Contents:\n");
     fprintf(stderr, "Stored Fields:\n");
     fprintf(stderr, "  ninodes%13d\n", sup_block.ninodes);
     fprintf(stderr, "  i_blocks%12d\n", sup_block.i_blocks);
@@ -270,7 +270,8 @@ void get_start(FILE *fp) {
 		}
 	}
 	
-	fseek(fp, start, SEEK_SET);
+	fs_start = start;
+	/*fseek(fp, start, SEEK_SET);*/
 }
 
 void parse_pt_entry(FILE *fp, pt_entry *p, int idx){
@@ -392,9 +393,9 @@ void parse_args(int argc, char *argv[]) {
 	}
 		  
 	/*printf("optind %d\n", optind);*/
-	for(; optind < argc; optind++){    
+	for(i = optind; i < argc; i++){    
 		/*printf("argv[%d] = %s\n", optind, argv[optind]);*/
-		update_paths(&imgfile, &mpath, argv[optind]);
+		update_paths(&imgfile, &mpath, argv[i]);
     }
 	
 	check_parts();
@@ -430,12 +431,12 @@ int parse_int(char *arg) {
 /* Updates path values from arg based on what is not defined yet */
 void update_paths(char **imgfile, char **mpath, char *arg){
 	if (*imgfile == NULL) {
-		printf("adding %s to imgfile\n", arg);
+		/*printf("adding %s to imgfile\n", arg);*/
 		*imgfile = arg;
 	}
 	
 	else if (*mpath == NULL) {
-		printf("adding %s to mpath\n", arg);
+		/*printf("adding %s to mpath\n", arg);*/
 		*mpath = arg;
 	}
 	
@@ -528,6 +529,7 @@ void print_opts(char *imgfile, char *mpath) {
 	printf("  opt->subpart   %d\n", subpartitions);
 	printf("  opt->imagefile %s\n", imgfile);
 	printf("  opt->srcpath   %s\n", mpath);
-	printf("\n  verbosity-> %d\n", v_flag);
+	printf("  opt->dstpath   (null)\n");
+	/*printf("\n  verbosity-> %d\n", v_flag);*/
 }
 

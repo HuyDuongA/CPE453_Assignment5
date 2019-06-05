@@ -16,7 +16,6 @@
 #define DIRENT_B_SIZE 64
 #define SECTOR_SIZE 512
 #define S_BLOCK_OFFSET 1024
-=======
 #define INODE_B_SIZE    64
 #define DIRENT_B_SIZE   64
 #define SECTOR_SIZE     512
