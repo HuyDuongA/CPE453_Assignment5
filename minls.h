@@ -135,15 +135,19 @@ void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
     uint32_t *inode_offset);
-void get_inode_info(FILE *fp, uint32_t inode_offset);
+/*void get_inode_info(FILE *fp, uint32_t inode_offset);*/
 void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
     uint32_t inode_offset);
 void print_stored_fields();
-void print_inode();
-void convert_mode_to_string(char *perm_string);
+/*void print_inode();*/
+void print_inode(struct inode *inode_info);
+/*void convert_mode_to_string(char *perm_string);*/
+void convert_mode_to_string(char *perm_string, struct inode *inode_info);
 void get_owner_perm(char *perm_string, uint16_t mode);
 void get_group_perm(char *perm_string, uint16_t mode);
 void get_other_perm(char *perm_string, uint16_t mode);
-void print_dir();
+void print_dir(FILE *fp, struct inode *inode_ent);
+
+void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
 
 #endif

@@ -5,25 +5,31 @@ static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
 static struct superblock sup_block;
-static struct inode inode_info;
+/*static struct inode inode_info;*/
 static uint32_t fs_start = 0;
+static uint32_t inode_start = 0;
 
 /* ============ Functions for no partition nor subpartition === */
 void parse_file_sys(FILE *fp){
     uint32_t imap_offset = 0;
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
+	struct inode root_inode;
 
     /* parse superblock */ 
     get_sup_block(fp);
 
     /* parse inode info */
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
-    get_inode_info(fp, inode_offset);
+    /*get_inode_info(fp, inode_offset);*/
+	get_inode(fp, 1, &root_inode);
 
 	if (v_flag > 0) {
-		print_sup_block(imap_offset, zmap_offset, inode_offset);
+		print_stored_fields();
+		print_inode(&root_inode);
 	}
+	
+	print_dir(fp, &root_inode);
 }
 
 void get_sup_block(FILE *fp){
@@ -44,22 +50,17 @@ void get_sup_block(FILE *fp){
 }
 
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset)
-{
+    uint32_t *inode_offset) {
    uint16_t blocksize = sup_block.blocksize;
 
    *imap_offset = fs_start + 2 * blocksize; 
    *zmap_offset = *imap_offset + sup_block.i_blocks * blocksize;
    *inode_offset = *zmap_offset + sup_block.z_blocks * blocksize;
+   inode_start = *inode_offset;
 }
 
-void get_inode_info(FILE *fp, uint32_t inode_offset){
-    if(fseek(fp, fs_start, SEEK_SET) < 0){
-        perror("fseek");
-        exit(-1);
-    }
-
-    if(fseek(fp, inode_offset, SEEK_CUR) < 0){
+/*void get_inode_info(FILE *fp, uint32_t inode_offset){
+    if(fseek(fp, inode_offset, SEEK_SET) < 0){
         perror("fseek");
         exit(-1);
     }
@@ -68,20 +69,29 @@ void get_inode_info(FILE *fp, uint32_t inode_offset){
         perror("fread reads nothing");
         exit(-1);
     }
-    
-	/*if (v_flag > 0) {
-		print_sup_block();
-	}
+}*/
 
-    print_sup_block();*/
-}
+void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
+	struct inode curr_inode;
+	uint32_t inode_index = (inode_num - 1) * sizeof(struct inode);
+	fpos_t pos;
+	
+	fgetpos(fp, &pos);
+	
+	if(fseek(fp, inode_start + inode_index, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
 
-void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset,
-    uint32_t inode_offset)
-{
-    print_stored_fields();
-    print_inode();
-    print_dir();
+    if(fread(&curr_inode, sizeof(struct inode), 1, fp) == 0){
+        perror("fread reads nothing");
+        exit(-1);
+    }
+	
+	fsetpos(fp, &pos);
+	
+	/*memcpy(i, &curr_inode, sizeof(struct inode));*/
+	*i = curr_inode;
 }
 
 void print_stored_fields(){
@@ -104,16 +114,19 @@ void print_stored_fields(){
     fprintf(stderr, "  subversion%10d\n", sup_block.subversion);
 }
 
-void print_inode(){
+void print_inode(struct inode *inode_info){
     char perm[11] = {0};
-    time_t a_time = inode_info.atime;
+    /*time_t a_time = inode_info.atime;
     time_t m_time = inode_info.mtime;
-    time_t c_time = inode_info.ctime;
+    time_t c_time = inode_info.ctime;*/
+	time_t a_time = inode_info->atime;
+    time_t m_time = inode_info->mtime;
+    time_t c_time = inode_info->ctime;
     int i = 0;
 
-    convert_mode_to_string(perm);
-    fprintf(stderr, "\nFile inode:\n");
     /*TODO print mode*/
+	convert_mode_to_string(perm, inode_info);
+    /*fprintf(stderr, "\nFile inode:\n");
     fprintf(stderr, "  unsigned short mode         0x"
                     "%x\t(%s)\n", inode_info.mode, perm);
     fprintf(stderr, "  unsigned short links%14d\n", inode_info.links);
@@ -135,11 +148,35 @@ void print_inode(){
     }
     fprintf(stderr, "   uint32_t indirect    =%11d\n", inode_info.indirect);
     fprintf(stderr, "   uint32_t double      =%11d\n", 
-        inode_info.double_indirect);
+        inode_info.double_indirect);*/
+		
+	fprintf(stderr, "\nFile inode:\n");
+    fprintf(stderr, "  unsigned short mode         0x"
+                    "%x\t(%s)\n", inode_info->mode, perm);
+    fprintf(stderr, "  unsigned short links%14d\n", inode_info->links);
+    fprintf(stderr, "  unsigned short uid%16d\n", inode_info->uid);
+    fprintf(stderr, "  unsigned short uid%16d\n", inode_info->gid);
+    fprintf(stderr, "  uint32_t size%15d\n", inode_info->size);
+
+    fprintf(stderr, "  uint32_t atime%14d"" --- %s", 
+        inode_info->atime, ctime(&a_time));
+    fprintf(stderr, "  uint32_t mtime%14d"" --- %s", 
+        inode_info->mtime, ctime(&m_time));
+    fprintf(stderr, "  uint32_t ctime%14d"" --- %s\n", 
+        inode_info->ctime, ctime(&c_time));
+    fprintf(stderr, "  Direct zones:\n");
+    
+    for(i = 0; i < DIRECT_ZONES; i++){
+        fprintf(stderr, "               zone[%d]  =%11d\n", 
+            i, inode_info->zone[i]);
+    }
+    fprintf(stderr, "   uint32_t indirect    =%11d\n", inode_info->indirect);
+    fprintf(stderr, "   uint32_t double      =%11d\n", 
+        inode_info->double_indirect);
 }
 
-void convert_mode_to_string(char *perm_string){
-    uint16_t mode = inode_info.mode;
+void convert_mode_to_string(char *perm_string, struct inode *inode_info){
+    uint16_t mode = inode_info->mode;
     uint16_t type_mask = mode & TYPE_MASK;
     if(type_mask == REG_FILE){
         perm_string[0] = '-';
@@ -222,7 +259,41 @@ void get_other_perm(char *perm_string, uint16_t mode){
         perm_string[O_EXEC_INDEX] = '-';
     }
 }
-void print_dir(){
+void print_dir(FILE *fp, struct inode *inode_ent){
+	struct dirent curr_dirent;
+	struct inode curr_inode;
+	int i;
+	
+	uint16_t block_size = sup_block.blocksize;
+    int16_t log_zone_size = sup_block.log_zone_size;
+    uint32_t zone_size = block_size * (1 << log_zone_size);
+	uint32_t zone_num = (inode_ent->zone[0]) * zone_size;
+	uint32_t num_dirents = inode_ent->size / sizeof(struct dirent);
+	
+	printf("\nZone Num %d with location %d \nNum of dirents = %d\n", inode_ent->zone[0], zone_num, num_dirents);
+	
+	if(fseek(fp, fs_start, SEEK_SET) < 0){
+			perror("fseek");
+			exit(-1);
+	}
+	
+	if(fseek(fp, zone_num, SEEK_CUR) < 0){
+			perror("fseek");
+			exit(-1);
+	}
+	
+	for (i = 0; i < num_dirents ; i++) {
+		if(fread(&curr_dirent, sizeof(struct dirent), 1, fp) == 0){
+			perror("fread reads nothing");
+			exit(-1);
+		}
+		
+		printf("inode: %u name: %s ", curr_dirent.inode, curr_dirent.name);
+		
+		get_inode(fp, curr_dirent.inode, &curr_inode);
+		
+		printf("size: %u\n", curr_inode.size);
+	}
 }
 
 /* ============ Functions for accessing image info ============ */
@@ -338,15 +409,18 @@ void print_pt_table(FILE *fp, char p_flag) {
 }
 
 void print_pt_entry(pt_entry *p) {
+	uint16_t start_sec = (p->start_sec_cyl[0] & 0xc0) << 2;
+	uint16_t end_sec = (p->end_sec_cyl[0] & 0xc0) << 2;
+	
 	printf("  0x%02x ", p->bootind);
 	printf("%4d", p->start_head);
-	printf("%5u", p->start_sec_cyl[0]);
-	printf("%5u ", p->start_sec_cyl[1]);
+	printf("%5u", p->start_sec_cyl[0] & 0x3F);
+	printf("%5u ", start_sec | p->start_sec_cyl[1]);
 	
 	printf("0x%02x ", p->type);
 	printf("%4d", p->end_head);
-	printf("%5u", p->end_sec_cyl[0]);
-	printf("%5u ", p->end_sec_cyl[1]);
+	printf("%5u", p->end_sec_cyl[0] & 0x3F);
+	printf("%5u ", end_sec | p->end_sec_cyl[1]);
 	
 	printf("%10d", p->lFirst);
 	printf("%11d\n", p->size);
