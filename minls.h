@@ -50,6 +50,7 @@
 #define O_WRITE_INDEX   8
 #define O_EXEC_INDEX    9
 
+#define PTR_PER_ZONE    1024
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE 199309L
 
@@ -154,13 +155,9 @@ void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
 void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
         uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp);
-
-void get_first_values(FILE *fp, uint32_t imap_offset, 
-        uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
-        uint8_t *firstZmap, uint8_t *firstIblock);
-
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
     uint32_t *inode_offset);
+
 void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
     uint32_t inode_offset);
 void print_stored_fields();

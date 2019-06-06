@@ -37,7 +37,12 @@ void parse_file_sys(FILE *fp, char* mpath){
 	}
 	
 	/*traverse_path(fp, mpath, &root_inode);*/
-	printf("%s:\n", mpath);
+    if(mpath != NULL){
+	    printf("%s:\n", mpath);
+    }
+    else{
+        printf("/:\n");
+    }
 	print_dir(fp, &root_inode);
 }
 
@@ -96,58 +101,20 @@ void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset,
 void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
         uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp)
 {
-    uint16_t blocksize = sup_block.blocksize;
-    int16_t log_zone_size = sup_block.log_zone_size;
-
     comp_f->version = VERSION;
+    comp_f->firstImap = 2;
+    comp_f->firstZmap = comp_f->firstImap + sup_block.i_blocks;
+    comp_f->firstIblock = comp_f->firstZmap + sup_block.z_blocks;
+    
+    /*TODO fix zonesize */
+    comp_f->zonesize = sup_block.blocksize << sup_block.log_zone_size;
 
-    /*TODO the value of each element is incorrect*/
-    get_first_values(fp, imap_offset, zmap_offset, inode_offset,
-            &(comp_f->firstImap), &(comp_f->firstZmap), 
-            &(comp_f->firstIblock)); 
-
-    comp_f->zonesize = blocksize * (1 << log_zone_size);
     comp_f->ptrs_per_zone = comp_f->zonesize / sizeof(comp_f->zonesize);
     comp_f->ino_per_block = sup_block.blocksize/sizeof(struct inode);
     comp_f->wrongended = 0;
     comp_f->fileent_size = DIRENT_B_SIZE;
     comp_f->max_filename = MAX_FN_SIZE;
     comp_f->ent_per_zone = comp_f->zonesize/sizeof(struct dirent);
-}
-
-void get_first_values(FILE *fp, uint32_t imap_offset, 
-        uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
-        uint8_t *firstZmap, uint8_t *firstIblock)
-{
-    if(fseek(fp, imap_offset, SEEK_SET) < 0){
-        perror("fseek");
-        exit(-1);
-    }
-	
-	if(fread(firstImap, sizeof(*firstImap), 1, fp) == 0){
-        perror("fread reads nothing");
-        exit(-1);
-    }
-
-    if(fseek(fp, zmap_offset, SEEK_SET) < 0){
-        perror("fseek");
-        exit(-1);
-    }
-	
-	if(fread(firstZmap, sizeof(*firstZmap), 1, fp) == 0){
-        perror("fread reads nothing");
-        exit(-1);
-    }
-	
-	if(fseek(fp, inode_offset, SEEK_CUR) < 0){
-		perror("fseek");
-        exit(-1);
-	}
-	
-	if(fread(firstIblock, sizeof(*firstIblock), 1, fp) == 0){
-        perror("fread reads nothing");
-        exit(-1);
-    }
 }
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
@@ -228,7 +195,6 @@ void print_inode(struct inode *inode_info){
     time_t c_time = inode_info->ctime;
     int i = 0;
 
-    /*TODO print mode*/
 	convert_mode_to_string(perm, inode_info);	
 	fprintf(stderr, "\nFile inode:\n");
     
@@ -346,8 +312,7 @@ void get_other_perm(char *perm_string, uint16_t mode){
 void print_dir(FILE *fp, struct inode *inode_ent){
 	struct dirent curr_dir;
 	struct inode curr_inode;
-	int i;
-	
+    int i;
 	uint16_t block_size = sup_block.blocksize;
     int16_t log_zone_size = sup_block.log_zone_size;
     uint32_t zone_size = block_size * (1 << log_zone_size);
@@ -681,17 +646,17 @@ void mult_part_err(char flag) {
 
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
-    fprintf(stderr, "usage: %s  ", prog);
-    fprintf(stderr, "[ -v ] [ -p num [ -s num ] ] imagefile minixpath " 
-        "[ hostpath ]\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "\t-p\tpart    --- select partition for filesystem " 
+    fprintf(stdout, "usage: %s  ", prog);
+    fprintf(stdout, "[ -v ] [ -p num [ -s num ] ] imagefile " 
+        "[ path ]\n");
+    fprintf(stdout, "Options:\n");
+    fprintf(stdout, "\t-p\t part    --- select partition for filesystem " 
         "(default: none)\n");
-    fprintf(stderr, "\t-s\tsub     --- select subpartition for filesystem " 
+    fprintf(stdout, "\t-s\t sub     --- select subpartition for filesystem " 
         "(default: none)\n");
-    fprintf(stderr, "\t-h\thelp    --- print usage information and exit\n");
-    fprintf(stderr, "\t-v\tverbose --- increase verbosity level\n");
-    exit(0);
+    fprintf(stdout, "\t-h\t help    --- print usage information and exit\n");
+    fprintf(stdout, "\t-v\t verbose --- increase verbosity level\n");
+    exit(-1);
 }
 
 void print_opts(char *imgfile, char *mpath) {
