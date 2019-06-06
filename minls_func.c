@@ -13,17 +13,24 @@ void parse_file_sys(FILE *fp){
     uint32_t imap_offset = 0;
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
+    struct comp_fields comp_f;
 
     /* parse superblock */ 
     get_sup_block(fp);
+    get_offsets(&imap_offset, &zmap_offset, &inode_offset);
+
+    /* parse compute */
+    get_computed_field(imap_offset, zmap_offset, inode_offset, &comp_f, fp);
 
     /* parse inode info */
-    get_offsets(&imap_offset, &zmap_offset, &inode_offset);
     get_inode_info(fp, inode_offset);
 
-	if (v_flag > 0) {
-		print_sup_block(imap_offset, zmap_offset, inode_offset);
-	}
+    if (v_flag > 0) {
+        print_stored_fields();
+        print_computed_fields(comp_f);
+        print_inode();
+        print_dir();
+    }
 }
 
 void get_sup_block(FILE *fp){
@@ -43,45 +50,84 @@ void get_sup_block(FILE *fp){
     }
 }
 
-void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset)
+void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
+        uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp)
 {
-   uint16_t blocksize = sup_block.blocksize;
+    uint16_t blocksize = sup_block.blocksize;
+    int16_t log_zone_size = sup_block.log_zone_size;
 
-   *imap_offset = fs_start + 2 * blocksize; 
-   *zmap_offset = *imap_offset + sup_block.i_blocks * blocksize;
-   *inode_offset = *zmap_offset + sup_block.z_blocks * blocksize;
+    comp_f->version = VERSION;
+
+    /*TODO the value of each element is incorrect*/
+    get_first_values(fp, imap_offset, zmap_offset, inode_offset,
+            &(comp_f->firstImap), &(comp_f->firstZmap), 
+            &(comp_f->firstIblock)); 
+
+    comp_f->zonesize = blocksize * (1 << log_zone_size);
+    comp_f->ptrs_per_zone = comp_f->zonesize / sizeof(comp_f->zonesize);
+    comp_f->ino_per_block = sup_block.blocksize/sizeof(struct inode);
+    comp_f->wrongended = 0;
+    comp_f->fileent_size = DIRENT_B_SIZE;
+    comp_f->max_filename = MAX_FN_SIZE;
+    comp_f->ent_per_zone = comp_f->zonesize/sizeof(struct dirent);
+}
+
+void get_first_values(FILE *fp, uint32_t imap_offset, 
+        uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
+        uint8_t *firstZmap, uint8_t *firstIblock)
+{
+    if(fseek(fp, imap_offset, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
+    if(fread(firstImap, sizeof(*firstImap), 1, fp) == 0){
+        perror("fread reads nothing");
+        exit(-1);
+    }
+
+    if(fseek(fp, zmap_offset, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
+    if(fread(firstZmap, sizeof(*firstZmap), 1, fp) == 0){
+        perror("fread reads nothing");
+        exit(-1);
+    }
+
+    if(fseek(fp, inode_offset, SEEK_SET) < 0){
+        perror("fseek");
+        exit(-1);
+    }
+
+    if(fread(firstIblock, sizeof(*firstIblock), 1, fp) == 0){
+        perror("fread reads nothing");
+        exit(-1);
+    }
+}
+
+void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
+        uint32_t *inode_offset)
+{
+    uint16_t blocksize = sup_block.blocksize;
+
+    *imap_offset = fs_start + 2 * blocksize; 
+    *zmap_offset = *imap_offset + sup_block.i_blocks * blocksize;
+    *inode_offset = *zmap_offset + sup_block.z_blocks * blocksize;
 }
 
 void get_inode_info(FILE *fp, uint32_t inode_offset){
-    if(fseek(fp, fs_start, SEEK_SET) < 0){
+    if(fseek(fp, inode_offset, SEEK_SET) < 0){
         perror("fseek");
         exit(-1);
     }
 
-    if(fseek(fp, inode_offset, SEEK_CUR) < 0){
-        perror("fseek");
-        exit(-1);
-    }
-
+    fprintf(stderr, "Current position of the cursor is %lx\n", ftell(fp));
     if(fread(&inode_info, sizeof(inode_info), 1, fp) == 0){
         perror("fread reads nothing");
         exit(-1);
     }
-    
-	/*if (v_flag > 0) {
-		print_sup_block();
-	}
-
-    print_sup_block();*/
-}
-
-void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset,
-    uint32_t inode_offset)
-{
-    print_stored_fields();
-    print_inode();
-    print_dir();
 }
 
 void print_stored_fields(){
@@ -96,12 +142,27 @@ void print_stored_fields(){
     fprintf(stderr, "  z_blocks%12d\n", sup_block.z_blocks);
     fprintf(stderr, "  firstdata%11d\n", sup_block.firstdata);
     fprintf(stderr, "  log_zone_size%7d (zone size: %d)\n", 
-        log_zone_size, zone_size);
+            log_zone_size, zone_size);
     fprintf(stderr, "  max_file%12u\n", sup_block.max_file);
     fprintf(stderr, "  magic         0x""%x\n", sup_block.magic);
     fprintf(stderr, "  zones%15d\n", sup_block.zones);
     fprintf(stderr, "  blocksize%11d\n", sup_block.blocksize);
     fprintf(stderr, "  subversion%10d\n", sup_block.subversion);
+}
+
+void print_computed_fields(struct comp_fields comp_f){
+    fprintf(stderr, "Computed Fields:\n");
+    fprintf(stderr, "  version%13d\n", comp_f.version);
+    fprintf(stderr, "  firstImap%11d\n", comp_f.firstImap); 
+    fprintf(stderr, "  firstZmap%11d\n", comp_f.firstZmap); 
+    fprintf(stderr, "  firstIblock%9d\n", comp_f.firstIblock); 
+    fprintf(stderr, "  zonesize%12d\n", comp_f.firstImap); 
+    fprintf(stderr, "  ptrs_per_zone%7d\n", comp_f.ptrs_per_zone); 
+    fprintf(stderr, "  ino_per_block%7d\n", comp_f.ino_per_block); 
+    fprintf(stderr, "  wrongended%10d\n", comp_f.wrongended); 
+    fprintf(stderr, "  fileent_size%8d\n", comp_f.fileent_size); 
+    fprintf(stderr, "  max_filename%8d\n", comp_f.max_filename); 
+    fprintf(stderr, "  ent_per_zone%8d\n", comp_f.ent_per_zone); 
 }
 
 void print_inode(){
@@ -113,29 +174,28 @@ void print_inode(){
 
     convert_mode_to_string(perm);
     fprintf(stderr, "\nFile inode:\n");
-    /*TODO print mode*/
     fprintf(stderr, "  unsigned short mode         0x"
-                    "%x\t(%s)\n", inode_info.mode, perm);
+            "%x\t(%s)\n", inode_info.mode, perm);
     fprintf(stderr, "  unsigned short links%14d\n", inode_info.links);
     fprintf(stderr, "  unsigned short uid%16d\n", inode_info.uid);
     fprintf(stderr, "  unsigned short uid%16d\n", inode_info.gid);
     fprintf(stderr, "  uint32_t size%15d\n", inode_info.size);
 
     fprintf(stderr, "  uint32_t atime%14d"" --- %s", 
-        inode_info.atime, ctime(&a_time));
+            inode_info.atime, ctime(&a_time));
     fprintf(stderr, "  uint32_t mtime%14d"" --- %s", 
-        inode_info.mtime, ctime(&m_time));
+            inode_info.mtime, ctime(&m_time));
     fprintf(stderr, "  uint32_t ctime%14d"" --- %s\n", 
-        inode_info.ctime, ctime(&c_time));
+            inode_info.ctime, ctime(&c_time));
     fprintf(stderr, "  Direct zones:\n");
-    
+
     for(i = 0; i < DIRECT_ZONES; i++){
         fprintf(stderr, "               zone[%d]  =%11d\n", 
-            i, inode_info.zone[i]);
+                i, inode_info.zone[i]);
     }
     fprintf(stderr, "   uint32_t indirect    =%11d\n", inode_info.indirect);
     fprintf(stderr, "   uint32_t double      =%11d\n", 
-        inode_info.double_indirect);
+            inode_info.double_indirect);
 }
 
 void convert_mode_to_string(char *perm_string){
@@ -155,7 +215,8 @@ void convert_mode_to_string(char *perm_string){
         get_other_perm(perm_string, mode);
     }
     else{
-        fprintf(stderr, "Unrecognized type_mask in convert_mode_to_string\n");
+        fprintf(stderr, "Unrecognized type_mask %x and mode %x in " 
+                "convert_mode_to_string\n", type_mask, mode);
         exit(-1);
     }
 }
@@ -223,134 +284,134 @@ void get_other_perm(char *perm_string, uint16_t mode){
     }
 }
 void print_dir(){
-    
+
 }
 
 /* ============ Functions for accessing image info ============ */
 void minls(char* imgfile, char* mpath) {
-	FILE *fp;
-	
-	if((fp = fopen(imgfile, "r")) == NULL){
+    FILE *fp;
+
+    if((fp = fopen(imgfile, "r")) == NULL){
         perror("fopen");
         exit(-1);
     }
-	
-	if (partitions < 0 && subpartitions < 0) {
-		/* call superblock func here, pass in fp */
-		parse_file_sys(fp);
-	}
-	
-	else {
-		/* move fp, then call superblock func, passing in new fp */
-		get_start(fp);
-		parse_file_sys(fp);
-	}
+
+    if (partitions < 0 && subpartitions < 0) {
+        /* call superblock func here, pass in fp */
+        parse_file_sys(fp);
+    }
+
+    else {
+        /* move fp, then call superblock func, passing in new fp */
+        get_start(fp);
+        parse_file_sys(fp);
+    }
 }
 
 void get_start(FILE *fp) {
-	int start;
-	struct pt_entry part_info;
-	struct pt_entry subpart_info;
-	
-	if (partitions >= 0) {
-		check_valid_pt(fp);
-		parse_pt_entry(fp, &part_info, partitions);
-		if (v_flag > 0) {
-			print_pt_table(fp, 'p');
-		}
-		start = part_info.lFirst * SECTOR_SIZE;
-		
-		if (subpartitions >= 0) {
-			fseek(fp, part_info.lFirst * SECTOR_SIZE, SEEK_SET);
-			check_valid_pt(fp);
-			parse_pt_entry(fp, &subpart_info, subpartitions);
-			if (v_flag > 0) {
-				print_pt_table(fp, 's');
-			}
-			start = subpart_info.lFirst * SECTOR_SIZE;
-		}
-	}
-	
-	fs_start = start;
-	/*fseek(fp, start, SEEK_SET);*/
+    int start;
+    struct pt_entry part_info;
+    struct pt_entry subpart_info;
+
+    if (partitions >= 0) {
+        check_valid_pt(fp);
+        parse_pt_entry(fp, &part_info, partitions);
+        if (v_flag > 0) {
+            print_pt_table(fp, 'p');
+        }
+        start = part_info.lFirst * SECTOR_SIZE;
+
+        if (subpartitions >= 0) {
+            fseek(fp, part_info.lFirst * SECTOR_SIZE, SEEK_SET);
+            check_valid_pt(fp);
+            parse_pt_entry(fp, &subpart_info, subpartitions);
+            if (v_flag > 0) {
+                print_pt_table(fp, 's');
+            }
+            start = subpart_info.lFirst * SECTOR_SIZE;
+        }
+    }
+
+    fs_start = start;
+    /*fseek(fp, start, SEEK_SET);*/
 }
 
 void parse_pt_entry(FILE *fp, pt_entry *p, int idx){
-	fpos_t pos;
-	
-	fgetpos(fp, &pos);
-	fseek(fp, PT_START + (idx * sizeof(pt_entry)), SEEK_CUR);
-	fread(p, sizeof(pt_entry), 1, fp);
-	fsetpos(fp, &pos);
-	
-	check_valid_part(p);
+    fpos_t pos;
+
+    fgetpos(fp, &pos);
+    fseek(fp, PT_START + (idx * sizeof(pt_entry)), SEEK_CUR);
+    fread(p, sizeof(pt_entry), 1, fp);
+    fsetpos(fp, &pos);
+
+    check_valid_part(p);
 }
 
 void check_valid_part(pt_entry *p) {
-	/*print_pt_entry(p);*/
-	if (p->type != PT_TYPE) {
-		/* Change to stderr?? */
-		printf("Invalid pt table entry\n");
-		exit(-1);
-	}
+    /*print_pt_entry(p);*/
+    if (p->type != PT_TYPE) {
+        /* Change to stderr?? */
+        printf("Invalid pt table entry\n");
+        exit(-1);
+    }
 }
 
 void check_valid_pt(FILE *fp) {
-	uint8_t pt_check1, pt_check2;
-	fpos_t pos;
-	
-	fgetpos(fp, &pos);
-	fseek(fp, PT_VALID_CHECK_1, SEEK_CUR);
-	fread(&pt_check1, sizeof(pt_check1), 1, fp);
-	fread(&pt_check2, sizeof(pt_check2), 1, fp);
-	
-	if (pt_check1 != PT_VALID_1 || pt_check2 != PT_VALID_2) {
-		/* Change to stderr?? */
-		printf("Invalid pt table\n");
-		exit(-1);
-	}
-	
-	fsetpos(fp, &pos);
+    uint8_t pt_check1, pt_check2;
+    fpos_t pos;
+
+    fgetpos(fp, &pos);
+    fseek(fp, PT_VALID_CHECK_1, SEEK_CUR);
+    fread(&pt_check1, sizeof(pt_check1), 1, fp);
+    fread(&pt_check2, sizeof(pt_check2), 1, fp);
+
+    if (pt_check1 != PT_VALID_1 || pt_check2 != PT_VALID_2) {
+        /* Change to stderr?? */
+        printf("Invalid pt table\n");
+        exit(-1);
+    }
+
+    fsetpos(fp, &pos);
 }
 
 void print_pt_table(FILE *fp, char p_flag) {
-	struct pt_entry p_info;
-	fpos_t pos;
-	int i;
-	
-	if (p_flag == 'p')
-		printf("\nPartition table:\n");
-	else
-		printf("\nSubpartition table:\n");
-	
-	printf("       ----Start----      ------End-----\n");
-	printf("  Boot head  sec  cyl ");
-	printf("Type head  sec  cyl");
-	printf("      First       Size\n");
-	
-	fgetpos(fp, &pos);
-	fseek(fp, PT_START, SEEK_CUR);
-	for (i = 0; i < 4; i++) {
-		fread(&p_info, sizeof(pt_entry), 1, fp);
-		print_pt_entry(&p_info);
-	}
-	
-	fsetpos(fp, &pos);
+    struct pt_entry p_info;
+    fpos_t pos;
+    int i;
+
+    if (p_flag == 'p')
+        printf("\nPartition table:\n");
+    else
+        printf("\nSubpartition table:\n");
+
+    printf("       ----Start----      ------End-----\n");
+    printf("  Boot head  sec  cyl ");
+    printf("Type head  sec  cyl");
+    printf("      First       Size\n");
+
+    fgetpos(fp, &pos);
+    fseek(fp, PT_START, SEEK_CUR);
+    for (i = 0; i < 4; i++) {
+        fread(&p_info, sizeof(pt_entry), 1, fp);
+        print_pt_entry(&p_info);
+    }
+
+    fsetpos(fp, &pos);
 }
 
 void print_pt_entry(pt_entry *p) {
-	printf("  0x%02x ", p->bootind);
-	printf("%4d", p->start_head);
-	printf("%5u", p->start_sec_cyl[0]);
-	printf("%5u ", p->start_sec_cyl[1]);
-	
-	printf("0x%02x ", p->type);
-	printf("%4d", p->end_head);
-	printf("%5u", p->end_sec_cyl[0]);
-	printf("%5u ", p->end_sec_cyl[1]);
-	
-	printf("%10d", p->lFirst);
-	printf("%11d\n", p->size);
+    printf("  0x%02x ", p->bootind);
+    printf("%4d", p->start_head);
+    printf("%5u", p->start_sec_cyl[0]);
+    printf("%5u ", p->start_sec_cyl[1]);
+
+    printf("0x%02x ", p->type);
+    printf("%4d", p->end_head);
+    printf("%5u", p->end_sec_cyl[0]);
+    printf("%5u ", p->end_sec_cyl[1]);
+
+    printf("%10d", p->lFirst);
+    printf("%11d\n", p->size);
 }
 
 
@@ -358,179 +419,179 @@ void print_pt_entry(pt_entry *p) {
 
 /* Parses out the command line arguments given */
 void parse_args(int argc, char *argv[]) {
-	int i, pval, sval, flag;
-	char* imgfile = NULL;
-	char* mpath = NULL;
-	
-	prog = argv[0];
-	if (argc == 1) {
-		usage_message();
-	}
-	
-	while ((flag = getopt (argc, argv, "p:s:vh")) != -1) {
-		switch (flag){
-			case 'p':
-				/*printf("in p, optarg is %s\n", optarg);*/
-				pval = parse_int(optarg);
-				update_parts(flag, pval);
-				break;
-			case 's':
-				/*printf("in s, optarg is %s\n", optarg);*/
-				sval = parse_int(optarg);
-				update_parts(flag, sval);
-				break;
-			case 'h':
-				/*printf("in h\n");*/
-				usage_message();
-				break;
-			case 'v':
-				/*printf("in v\n");*/
-				update_verbosity();
-				break;
-			case '?':
-				/*printf("in ? (WHY!)\n");*/
-				break;
-		}
-	}
-		  
-	/*printf("optind %d\n", optind);*/
-	for(i = optind; i < argc; i++){    
-		/*printf("argv[%d] = %s\n", optind, argv[optind]);*/
-		update_paths(&imgfile, &mpath, argv[i]);
+    int i, pval, sval, flag;
+    char* imgfile = NULL;
+    char* mpath = NULL;
+
+    prog = argv[0];
+    if (argc == 1) {
+        usage_message();
     }
-	
-	check_parts();
-	check_imgfile(imgfile);
-	
-	if (v_flag > 1) {
-		print_opts(imgfile, mpath);
-	}
-	
-	minls(imgfile, mpath);
+
+    while ((flag = getopt (argc, argv, "p:s:vh")) != -1) {
+        switch (flag){
+            case 'p':
+                /*printf("in p, optarg is %s\n", optarg);*/
+                pval = parse_int(optarg);
+                update_parts(flag, pval);
+                break;
+            case 's':
+                /*printf("in s, optarg is %s\n", optarg);*/
+                sval = parse_int(optarg);
+                update_parts(flag, sval);
+                break;
+            case 'h':
+                /*printf("in h\n");*/
+                usage_message();
+                break;
+            case 'v':
+                /*printf("in v\n");*/
+                update_verbosity();
+                break;
+            case '?':
+                /*printf("in ? (WHY!)\n");*/
+                break;
+        }
+    }
+
+    /*printf("optind %d\n", optind);*/
+    for(i = optind; i < argc; i++){    
+        /*printf("argv[%d] = %s\n", optind, argv[optind]);*/
+        update_paths(&imgfile, &mpath, argv[i]);
+    }
+
+    check_parts();
+    check_imgfile(imgfile);
+
+    if (v_flag > 1) {
+        print_opts(imgfile, mpath);
+    }
+
+    minls(imgfile, mpath);
 }
 
 /* Parses string argument into an int, returns int if successful */
 int parse_int(char *arg) {
-	int val;
-	
-	if (strcmp(arg, "0") == 0) {
-		val = 0;
-	}
-	
-	else {
-		val = atoi(arg);
-		
-		if (val == 0) {
-			printf("%s: badly formed integer.\n", arg);
-			usage_message();
-		}
-	}
-		
-	return val;
+    int val;
+
+    if (strcmp(arg, "0") == 0) {
+        val = 0;
+    }
+
+    else {
+        val = atoi(arg);
+
+        if (val == 0) {
+            printf("%s: badly formed integer.\n", arg);
+            usage_message();
+        }
+    }
+
+    return val;
 }
 
 /* Updates path values from arg based on what is not defined yet */
 void update_paths(char **imgfile, char **mpath, char *arg){
-	if (*imgfile == NULL) {
-		/*printf("adding %s to imgfile\n", arg);*/
-		*imgfile = arg;
-	}
-	
-	else if (*mpath == NULL) {
-		/*printf("adding %s to mpath\n", arg);*/
-		*mpath = arg;
-	}
-	
-	else {
-		/*printf("in update_paths(), adding %s\n", arg);*/
-		usage_message();
-	}
+    if (*imgfile == NULL) {
+        /*printf("adding %s to imgfile\n", arg);*/
+        *imgfile = arg;
+    }
+
+    else if (*mpath == NULL) {
+        /*printf("adding %s to mpath\n", arg);*/
+        *mpath = arg;
+    }
+
+    else {
+        /*printf("in update_paths(), adding %s\n", arg);*/
+        usage_message();
+    }
 }
 
 /* Updates part/subpart based on flag arg */
 void update_parts(char flag, int val) {
-	if (val > 3 || val < 0)
-		range_part_err(flag, val);
-	
-	if (flag == 'p') {
-		if (partitions == -1)
-			partitions = val;
-		else
-			mult_part_err(flag);
-	}
-	
-	else {
-		if (subpartitions == -1)
-			subpartitions = val;
-		else
-			mult_part_err(flag);
-	}
+    if (val > 3 || val < 0)
+        range_part_err(flag, val);
+
+    if (flag == 'p') {
+        if (partitions == -1)
+            partitions = val;
+        else
+            mult_part_err(flag);
+    }
+
+    else {
+        if (subpartitions == -1)
+            subpartitions = val;
+        else
+            mult_part_err(flag);
+    }
 }
 
 /* Updates verbosity level */
 void update_verbosity() {
-	if (v_flag < 2)
-		v_flag++;
+    if (v_flag < 2)
+        v_flag++;
 }
 
 /* Checks if part/subpart values are valid */
 void check_parts() {
-	if (partitions < 0 && subpartitions >= 0) {
-		printf("Cannot have a subpartition without a partition.\n");
-		usage_message();
-	}
+    if (partitions < 0 && subpartitions >= 0) {
+        printf("Cannot have a subpartition without a partition.\n");
+        usage_message();
+    }
 }
 
 /* Checks if an image file is specified */
 void check_imgfile(char* imgfile) {
-	if (imgfile == NULL) {
-		usage_message();
-	}
+    if (imgfile == NULL) {
+        usage_message();
+    }
 }
 
 /* Error message for partitions out of range */
 void range_part_err(char flag, int val) {
-	if (flag == 'p')
-		printf("Partition %d out of range.  Must be 0..3.\n", val);
-	else
-		printf("Subpartition %d out of range.  Must be 0..3.\n", val);
-	
-	usage_message();
+    if (flag == 'p')
+        printf("Partition %d out of range.  Must be 0..3.\n", val);
+    else
+        printf("Subpartition %d out of range.  Must be 0..3.\n", val);
+
+    usage_message();
 }
 
 /* Error message for multiple partitions specified */
 void mult_part_err(char flag) {
-	if (flag == 'p') 
-		printf("%s: more than one partition specified.\n", prog);
-	else
-		printf("%s: more than one subpartition specified.\n", prog);
-	
-	usage_message();
+    if (flag == 'p') 
+        printf("%s: more than one partition specified.\n", prog);
+    else
+        printf("%s: more than one subpartition specified.\n", prog);
+
+    usage_message();
 }
 
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
-	printf("usage: %s  ", prog);
-	printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath [ hostpath ]\n");
-	printf("Options:\n");
-	printf("        -p       part    ");
-	printf("--- select partition for filesystem (default: none)\n");
-	printf("        -s       sub     ");
-	printf("--- select subpartition for filesystem (default: none)\n");
-	printf("        -h       help    ");
-	printf("--- print usage information and exit\n");
-	printf("        -v       verbose ");
-	printf("--- increase verbosity level\n");
-	exit(0);
+    printf("usage: %s  ", prog);
+    printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath [ hostpath ]\n");
+    printf("Options:\n");
+    printf("        -p       part    ");
+    printf("--- select partition for filesystem (default: none)\n");
+    printf("        -s       sub     ");
+    printf("--- select subpartition for filesystem (default: none)\n");
+    printf("        -h       help    ");
+    printf("--- print usage information and exit\n");
+    printf("        -v       verbose ");
+    printf("--- increase verbosity level\n");
+    exit(0);
 }
 
 void print_opts(char *imgfile, char *mpath) {
-	printf("\nOptions:\n");
-	printf("  opt->part      %d\n", partitions);
-	printf("  opt->subpart   %d\n", subpartitions);
-	printf("  opt->imagefile %s\n", imgfile);
-	printf("  opt->srcpath   %s\n", mpath);
-	printf("  opt->dstpath   (null)\n");
-	/*printf("\n  verbosity-> %d\n", v_flag);*/
+    printf("\nOptions:\n");
+    printf("  opt->part      %d\n", partitions);
+    printf("  opt->subpart   %d\n", subpartitions);
+    printf("  opt->imagefile %s\n", imgfile);
+    printf("  opt->srcpath   %s\n", mpath);
+    printf("  opt->dstpath   (null)\n");
+    /*printf("\n  verbosity-> %d\n", v_flag);*/
 }
 

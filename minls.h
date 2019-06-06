@@ -1,25 +1,22 @@
 #ifndef MINLS_H
 #define MINLS_H
 
-#define DIRECT_ZONES    7
-#define PT_START        0x1BE
-#define PT_TYPE         0x81
-#define PT_VALID_1      0x55
-#define PT_VALID_2      0xAA
-#define MINIX_MAGIC_NUM 0x4D5A
-#define INODE_B_SIZE 64
-#define DIRENT_B_SIZE 64
-#define SECTOR_SIZE 512
-#define S_BLOCK_OFFSET 1024
-#define PT_VALID_CHECK_1 510
-#define INODE_B_SIZE 64
-#define DIRENT_B_SIZE 64
-#define SECTOR_SIZE 512
-#define S_BLOCK_OFFSET 1024
-#define INODE_B_SIZE    64
-#define DIRENT_B_SIZE   64
-#define SECTOR_SIZE     512
-#define S_BLOCK_OFFSET  1024
+#define DIRECT_ZONES        7
+#define PT_START            0x1BE
+#define PT_TYPE             0x81
+#define PT_VALID_1          0x55
+#define PT_VALID_2          0xAA
+
+#define MINIX_MAGIC_NUM     0x4D5A
+#define INODE_B_SIZE        64
+#define DIRENT_B_SIZE       64
+#define SECTOR_SIZE         512
+#define S_BLOCK_OFFSET      1024
+#define PT_VALID_CHECK_1    510
+#define PT_VALID_CHECK_2    511
+
+#define VERSION         3
+#define MAX_FN_SIZE     60
 
 #define TYPE_MASK       0170000
 #define REG_FILE        0100000
@@ -34,7 +31,7 @@
 
 #define G_READ_PERM     0000040
 #define G_WRITE_PERM    0000020
-#define G_EXEC_PERM     0b0000010
+#define G_EXEC_PERM     0000010
 #define G_READ_INDEX    4
 #define G_WRITE_INDEX   5
 #define G_EXEC_INDEX    6
@@ -60,53 +57,68 @@
 
 /* Struct definition for a partition table entry */
 typedef struct __attribute__ ((__packed__)) pt_entry {
-	uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
-	uint8_t start_head; 		/* Start of partition in CHS */
-	uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-	uint8_t type; 				/* Type of Partition (0x81 is MINIX) */
-	uint8_t end_head; 			/* End of partition in CHS */
-	uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-	uint32_t lFirst; 			/* First sector (LBA addressing) */
-	uint32_t size; 				/* size of partition (in sectors */
+    uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
+    uint8_t start_head; 		/* Start of partition in CHS */
+    uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
+    uint8_t type; 				/* Type of Partition (0x81 is MINIX) */
+    uint8_t end_head; 			/* End of partition in CHS */
+    uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
+    uint32_t lFirst; 			/* First sector (LBA addressing) */
+    uint32_t size; 				/* size of partition (in sectors */
 } pt_entry;
 
 /* Struct definition for the superblock */
 struct __attribute__ ((__packed__)) superblock {
-	uint32_t ninodes; 		/* number of inodes in this fs */
-	uint16_t pad1; 			/* padding to line stuff up properly */
-	int16_t i_blocks; 		/* # of blocks used by inode bit map */
-	int16_t z_blocks; 		/* # of blocks used by zone bit map */
-	uint16_t firstdata; 	/* number of first data zone */
-	int16_t log_zone_size; 	/* log2 of blocks per zone */
-	uint16_t pad2; 			/* padding to line stuff up properly */
-	uint32_t max_file; 		/* maximum file size */
-	uint32_t zones; 		/* number of zones on disk */
-	int16_t magic; 			/* magic number */
-	uint16_t pad3; 			/* padding to line stuff up properly */
-	uint16_t blocksize; 	/* block size in bytes */
-	uint8_t subversion; 	/* filesystem sub-version */
+    uint32_t ninodes; 		/* number of inodes in this fs */
+    uint16_t pad1; 			/* padding to line stuff up properly */
+    int16_t i_blocks; 		/* # of blocks used by inode bit map */
+    int16_t z_blocks; 		/* # of blocks used by zone bit map */
+    uint16_t firstdata; 	/* number of first data zone */
+    int16_t log_zone_size; 	/* log2 of blocks per zone */
+    uint16_t pad2; 			/* padding to line stuff up properly */
+    uint32_t max_file; 		/* maximum file size */
+    uint32_t zones; 		/* number of zones on disk */
+    int16_t magic; 			/* magic number */
+    uint16_t pad3; 			/* padding to line stuff up properly */
+    uint16_t blocksize; 	/* block size in bytes */
+    uint8_t subversion; 	/* filesystem sub-version */
 };
 
 /* Struct definition for a inode entry */
 struct __attribute__ ((__packed__)) inode {
-	uint16_t mode;
-	uint16_t links; 	/* number of links to file */
-	uint16_t uid;
-	uint16_t gid;
-	uint32_t size;
-	int32_t atime; 		/* Last accessed time */
-	int32_t mtime; 		/* Last modified time */
-	int32_t ctime; 		/* Created time */
-	uint32_t zone[DIRECT_ZONES];
-	uint32_t indirect;
-	uint32_t double_indirect;
-	uint32_t unused;
+    uint16_t mode;
+    uint16_t links; 	/* number of links to file */
+    uint16_t uid;
+    uint16_t gid;
+    uint32_t size;
+    int32_t atime; 		/* Last accessed time */
+    int32_t mtime; 		/* Last modified time */
+    int32_t ctime; 		/* Created time */
+    uint32_t zone[DIRECT_ZONES];
+    uint32_t indirect;
+    uint32_t double_indirect;
+    uint32_t unused;
 };
 
 /* Struct definition for a directory entry */
 struct __attribute__ ((__packed__)) dirent {
-	uint32_t inode; 	/* inode number */
-	uint8_t name[60]; 	/* filename (nul-terminated if space available) */
+    uint32_t inode; 	/* inode number */
+    uint8_t name[60]; 	/* filename (nul-terminated if space available) */
+};
+
+/* Struct definition for computed fields in superblock contents */
+struct __attribute__ ((__packed__)) comp_fields {
+    uint32_t version;
+    uint8_t firstImap;
+    uint8_t firstZmap;
+    uint8_t firstIblock;
+    uint32_t zonesize;
+    uint32_t ptrs_per_zone;
+    uint32_t ino_per_block;
+    uint32_t wrongended;
+    uint32_t fileent_size;
+    uint32_t max_filename;
+    uint32_t ent_per_zone;
 };
 
 void minls(char* imgfile, char* mpath);
@@ -133,13 +145,21 @@ void print_opts(char *imgfile, char *mpath);
 void parse_file_sys(FILE *fp);
 void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
+void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
+        uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp);
+
+void get_first_values(FILE *fp, uint32_t imap_offset, 
+        uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
+        uint8_t *firstZmap, uint8_t *firstIblock);
+
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset);
+        uint32_t *inode_offset);
 void get_inode_info(FILE *fp, uint32_t inode_offset);
-void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
-    uint32_t inode_offset);
+
 void print_stored_fields();
 void print_inode();
+void print_computed_fields();
+
 void convert_mode_to_string(char *perm_string);
 void get_owner_perm(char *perm_string, uint16_t mode);
 void get_group_perm(char *perm_string, uint16_t mode);
