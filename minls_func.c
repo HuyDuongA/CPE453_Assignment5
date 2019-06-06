@@ -20,6 +20,8 @@ void parse_file_sys(FILE *fp, char* mpath){
 
     /* parse superblock */ 
     get_sup_block(fp);
+    check_magic_number();
+
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
 
     /* parse compute */
@@ -82,6 +84,15 @@ void get_sup_block(FILE *fp){
 
     if(fread(&sup_block, sizeof(sup_block), 1, fp) == 0){
         perror("fread reads nothing");
+        exit(-1);
+    }
+}
+
+void check_magic_number(){
+    if(sup_block.magic != MINIX_MAGIC_NUM){
+        fprintf(stderr, "Bad magic number. (0x%.4x)\n"
+                "This doesn't look like a MINIX filesystem.\n", 
+                sup_block.magic);
         exit(-1);
     }
 }

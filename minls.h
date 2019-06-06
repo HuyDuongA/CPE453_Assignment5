@@ -153,6 +153,7 @@ void print_opts(char *imgfile, char *mpath);
 void parse_file_sys(FILE *fp, char* mpath);
 void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
+void check_magic_number();
 void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
         uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp);
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
