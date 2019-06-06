@@ -345,8 +345,9 @@ void print_dir(FILE *fp, struct inode *inode_ent){
 
 void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
 	char perm[11] = {0};
-	
+    	
 	/* Deleted file */
+    /*
 	if (curr_dir->inode == 0) {
 		printf("---------- -Deleted-");
 	}
@@ -357,6 +358,12 @@ void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
 	}
 	
 	printf(" %s\n", curr_dir->name);
+    */
+    if(curr_dir->inode != 0){
+		convert_mode_to_string(perm, curr_inode);
+		printf("%s%10u", perm, curr_inode->size);
+	    printf(" %s\n", curr_dir->name);
+    }
 }
 
 /* ============ Functions for accessing image info ============ */
