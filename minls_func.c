@@ -274,7 +274,8 @@ void convert_mode_to_string(char *perm_string, struct inode *inode_info){
         get_other_perm(perm_string, mode);
     }
     else{
-		fprintf(stderr, "Unrecognized type_mask in convert_mode_to_string\n");
+		fprintf(stderr, "Unrecognized type_mask in "
+            "convert_mode_to_string\n");
         exit(-1);
     }
 }
@@ -680,17 +681,16 @@ void mult_part_err(char flag) {
 
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
-    printf("usage: %s  ", prog);
-    printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath [ hostpath ]\n");
-    printf("Options:\n");
-    printf("        -p       part    ");
-    printf("--- select partition for filesystem (default: none)\n");
-    printf("        -s       sub     ");
-    printf("--- select subpartition for filesystem (default: none)\n");
-    printf("        -h       help    ");
-    printf("--- print usage information and exit\n");
-    printf("        -v       verbose ");
-    printf("--- increase verbosity level\n");
+    fprintf(stderr, "usage: %s  ", prog);
+    fprintf(stderr, "[ -v ] [ -p num [ -s num ] ] imagefile minixpath " 
+        "[ hostpath ]\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "\t-p\tpart    --- select partition for filesystem " 
+        "(default: none)\n");
+    fprintf(stderr, "\t-s\tsub     --- select subpartition for filesystem " 
+        "(default: none)\n");
+    fprintf(stderr, "\t-h\thelp    --- print usage information and exit\n");
+    fprintf(stderr, "\t-v\tverbose --- increase verbosity level\n");
     exit(0);
 }
 
