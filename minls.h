@@ -161,7 +161,6 @@ void get_first_values(FILE *fp, uint32_t imap_offset,
 
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
     uint32_t *inode_offset);
-/*void get_inode_info(FILE *fp, uint32_t inode_offset);*/
 void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
     uint32_t inode_offset);
 void print_stored_fields();

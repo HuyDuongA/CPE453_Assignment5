@@ -115,18 +115,6 @@ void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset,
     comp_f->ent_per_zone = comp_f->zonesize/sizeof(struct dirent);
 }
 
-/*
-void get_inode_info(FILE *fp, uint32_t inode_offset){
-    if(fseek(fp, inode_offset, SEEK_SET) < 0){
-		perror("fseek");
-        exit(-1);
-    }
-	
-	if(fread(&inode_info, sizeof(inode_info), 1, fp) == 0){
-        perror("fread reads nothing");
-        exit(-1);
-    }
-*/
 void get_first_values(FILE *fp, uint32_t imap_offset, 
         uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
         uint8_t *firstZmap, uint8_t *firstIblock)
