@@ -10,11 +10,12 @@ static uint32_t fs_start = 0;
 static uint32_t inode_start = 0;
 
 /* ============ Functions for no partition nor subpartition === */
-void parse_file_sys(FILE *fp){
+void parse_file_sys(FILE *fp, char* mpath){
     uint32_t imap_offset = 0;
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
 	struct inode root_inode;
+	struct inode path_inode;
 
     /* parse superblock */ 
     get_sup_block(fp);
@@ -22,15 +23,40 @@ void parse_file_sys(FILE *fp){
     /* parse inode info */
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
     /*get_inode_info(fp, inode_offset);*/
-	get_inode(fp, 1, &root_inode);
+	get_inode(fp, ROOT_INODE_IDX, &root_inode);
 
 	if (v_flag > 0) {
 		print_stored_fields();
 		print_inode(&root_inode);
 	}
 	
+	/*traverse_path(fp, mpath, &root_inode);*/
+	printf("%s:\n", mpath);
 	print_dir(fp, &root_inode);
 }
+
+/*void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
+	const char s[2] = '/';
+	char *file_name;
+	struct inode *curr_inode = inode;
+	int i;
+	uint16_t block_size = sup_block.blocksize;
+    int16_t log_zone_size = sup_block.log_zone_size;
+    uint32_t zone_size = block_size * (1 << log_zone_size);
+	
+	file_name = strtok(mpath, s);
+	
+	while (file_name != NULL) {
+		for (i = 0; i < DIRECT_ZONES; i++) {
+			zone_num = (curr_inode->zone[i]) * zone_size;
+			
+			if(fseek(fp, fs_start + zone_num, SEEK_SET) < 0){
+				perror("fseek");
+				exit(-1);
+			}
+		}
+	}	
+}*/
 
 void get_sup_block(FILE *fp){
     if(fseek(fp, fs_start, SEEK_SET) < 0){
@@ -116,9 +142,6 @@ void print_stored_fields(){
 
 void print_inode(struct inode *inode_info){
     char perm[11] = {0};
-    /*time_t a_time = inode_info.atime;
-    time_t m_time = inode_info.mtime;
-    time_t c_time = inode_info.ctime;*/
 	time_t a_time = inode_info->atime;
     time_t m_time = inode_info->mtime;
     time_t c_time = inode_info->ctime;
@@ -126,29 +149,6 @@ void print_inode(struct inode *inode_info){
 
     /*TODO print mode*/
 	convert_mode_to_string(perm, inode_info);
-    /*fprintf(stderr, "\nFile inode:\n");
-    fprintf(stderr, "  unsigned short mode         0x"
-                    "%x\t(%s)\n", inode_info.mode, perm);
-    fprintf(stderr, "  unsigned short links%14d\n", inode_info.links);
-    fprintf(stderr, "  unsigned short uid%16d\n", inode_info.uid);
-    fprintf(stderr, "  unsigned short uid%16d\n", inode_info.gid);
-    fprintf(stderr, "  uint32_t size%15d\n", inode_info.size);
-
-    fprintf(stderr, "  uint32_t atime%14d"" --- %s", 
-        inode_info.atime, ctime(&a_time));
-    fprintf(stderr, "  uint32_t mtime%14d"" --- %s", 
-        inode_info.mtime, ctime(&m_time));
-    fprintf(stderr, "  uint32_t ctime%14d"" --- %s\n", 
-        inode_info.ctime, ctime(&c_time));
-    fprintf(stderr, "  Direct zones:\n");
-    
-    for(i = 0; i < DIRECT_ZONES; i++){
-        fprintf(stderr, "               zone[%d]  =%11d\n", 
-            i, inode_info.zone[i]);
-    }
-    fprintf(stderr, "   uint32_t indirect    =%11d\n", inode_info.indirect);
-    fprintf(stderr, "   uint32_t double      =%11d\n", 
-        inode_info.double_indirect);*/
 		
 	fprintf(stderr, "\nFile inode:\n");
     fprintf(stderr, "  unsigned short mode         0x"
@@ -178,6 +178,7 @@ void print_inode(struct inode *inode_info){
 void convert_mode_to_string(char *perm_string, struct inode *inode_info){
     uint16_t mode = inode_info->mode;
     uint16_t type_mask = mode & TYPE_MASK;
+	
     if(type_mask == REG_FILE){
         perm_string[0] = '-';
         get_owner_perm(perm_string, mode);
@@ -192,7 +193,7 @@ void convert_mode_to_string(char *perm_string, struct inode *inode_info){
         get_other_perm(perm_string, mode);
     }
     else{
-        fprintf(stderr, "Unrecognized type_mask in convert_mode_to_string\n");
+		fprintf(stderr, "Unrecognized type_mask in convert_mode_to_string\n");
         exit(-1);
     }
 }
@@ -259,8 +260,10 @@ void get_other_perm(char *perm_string, uint16_t mode){
         perm_string[O_EXEC_INDEX] = '-';
     }
 }
+
+
 void print_dir(FILE *fp, struct inode *inode_ent){
-	struct dirent curr_dirent;
+	struct dirent curr_dir;
 	struct inode curr_inode;
 	int i;
 	
@@ -270,7 +273,8 @@ void print_dir(FILE *fp, struct inode *inode_ent){
 	uint32_t zone_num = (inode_ent->zone[0]) * zone_size;
 	uint32_t num_dirents = inode_ent->size / sizeof(struct dirent);
 	
-	printf("\nZone Num %d with location %d \nNum of dirents = %d\n", inode_ent->zone[0], zone_num, num_dirents);
+	/*printf("\nZone Num %d with location %d \nNum of dirents = %d\n", 
+	inode_ent->zone[0], zone_num, num_dirents);*/
 	
 	if(fseek(fp, fs_start, SEEK_SET) < 0){
 			perror("fseek");
@@ -283,17 +287,30 @@ void print_dir(FILE *fp, struct inode *inode_ent){
 	}
 	
 	for (i = 0; i < num_dirents ; i++) {
-		if(fread(&curr_dirent, sizeof(struct dirent), 1, fp) == 0){
+		if(fread(&curr_dir, sizeof(struct dirent), 1, fp) == 0){
 			perror("fread reads nothing");
 			exit(-1);
 		}
 		
-		printf("inode: %u name: %s ", curr_dirent.inode, curr_dirent.name);
-		
-		get_inode(fp, curr_dirent.inode, &curr_inode);
-		
-		printf("size: %u\n", curr_inode.size);
+		get_inode(fp, curr_dir.inode, &curr_inode);
+		print_file(&curr_dir, &curr_inode);
 	}
+}
+
+void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
+	char perm[11] = {0};
+	
+	/* Deleted file */
+	if (curr_dir->inode == 0) {
+		printf("---------- -Deleted-");
+	}
+	
+	else {
+		convert_mode_to_string(perm, curr_inode);
+		printf("%s%10u", perm, curr_inode->size);
+	}
+	
+	printf(" %s\n", curr_dir->name);
 }
 
 /* ============ Functions for accessing image info ============ */
@@ -307,13 +324,13 @@ void minls(char* imgfile, char* mpath) {
 	
 	if (partitions < 0 && subpartitions < 0) {
 		/* call superblock func here, pass in fp */
-		parse_file_sys(fp);
+		parse_file_sys(fp, mpath);
 	}
 	
 	else {
 		/* move fp, then call superblock func, passing in new fp */
 		get_start(fp);
-		parse_file_sys(fp);
+		parse_file_sys(fp, mpath);
 	}
 }
 

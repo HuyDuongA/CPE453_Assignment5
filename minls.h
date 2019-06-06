@@ -7,19 +7,20 @@
 #define PT_VALID_1      0x55
 #define PT_VALID_2      0xAA
 #define MINIX_MAGIC_NUM 0x4D5A
-#define INODE_B_SIZE 64
-#define DIRENT_B_SIZE 64
-#define SECTOR_SIZE 512
-#define S_BLOCK_OFFSET 1024
+#define INODE_B_SIZE 	64
+#define DIRENT_B_SIZE 	64
+#define SECTOR_SIZE 	512
+#define S_BLOCK_OFFSET 	1024
 #define PT_VALID_CHECK_1 510
-#define INODE_B_SIZE 64
-#define DIRENT_B_SIZE 64
-#define SECTOR_SIZE 512
-#define S_BLOCK_OFFSET 1024
+#define INODE_B_SIZE 	64
+#define DIRENT_B_SIZE 	64
+#define SECTOR_SIZE 	512
+#define S_BLOCK_OFFSET 	1024
 #define INODE_B_SIZE    64
 #define DIRENT_B_SIZE   64
 #define SECTOR_SIZE     512
 #define S_BLOCK_OFFSET  1024
+#define ROOT_INODE_IDX	1
 
 #define TYPE_MASK       0170000
 #define REG_FILE        0100000
@@ -130,7 +131,7 @@ void mult_part_err(char flag);
 void usage_message();
 void print_opts(char *imgfile, char *mpath);
 
-void parse_file_sys(FILE *fp);
+void parse_file_sys(FILE *fp, char* mpath);
 void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
 void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
@@ -147,6 +148,7 @@ void get_owner_perm(char *perm_string, uint16_t mode);
 void get_group_perm(char *perm_string, uint16_t mode);
 void get_other_perm(char *perm_string, uint16_t mode);
 void print_dir(FILE *fp, struct inode *inode_ent);
+void print_file(struct dirent *curr_dir, struct inode *curr_inode);
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
 
