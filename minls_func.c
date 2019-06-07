@@ -56,7 +56,7 @@ void parse_file_sys(FILE *fp, char* mpath){
 	}
 	
 	else {
-		print_file(-1, mpath, &inode);
+		print_file(-1, o_path, &inode);
 	}
 }
 
@@ -85,9 +85,8 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path) {
 		if (!get_next_path_inode(fp, file_name, curr_inode, o_path)) {
 			bad_file_err(o_path);
 		}
-		
 		file_name = strtok(NULL, s);
-	}	
+	}
 }
 
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
@@ -116,6 +115,9 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
 		}
 		
 		if (strcmp((char *)curr_dir.name, file_name) == 0) {
+            if (!check_if_dir(inode)){
+                bad_dir_err(o_path);
+            }
 			if (curr_dir.inode == 0) {
 				bad_file_err(o_path);
 			}
@@ -128,8 +130,14 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
 	return found;	
 }
 
+void bad_dir_err(char *o_path){
+    fprintf(stderr, "lookupdir: Not a directory\n");
+	fprintf(stderr, "%s: File not found\n", o_path);
+	exit(-1);
+}
+
 void bad_file_err(char *o_path){
-	printf("%s: File not found\n", o_path);
+	fprintf(stderr, "%s: File not found\n", o_path);
 	exit(-1);
 }
 
@@ -393,6 +401,13 @@ int check_if_dir(struct inode *inode) {
     if(type_mask == REG_FILE){
 		dir_check = FALSE;
 	}
+    else if(type_mask == DIRECTORY){
+        dir_check = TRUE; 
+    }
+    else{
+        fprintf(stderr, "dir_check has invalid value of %d\n", type_mask);
+        exit(-1);
+    }
 	
 	return dir_check;
 }
@@ -422,6 +437,9 @@ void print_dir(FILE *fp, struct inode *inode){
 		}
 			
 		get_inode(fp, curr_dir.inode, &curr_inode);
+        /*
+        printf("curr_dir.name = %s\n", curr_dir.name);
+        */
 		print_file(curr_dir.inode, (char *)curr_dir.name, &curr_inode);
 	}
 }
