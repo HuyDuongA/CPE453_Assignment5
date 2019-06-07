@@ -93,13 +93,15 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
 {
 	struct dirent curr_dir;
     int i, found = 0, index = 0;
-	uint32_t zone_off;
+	uint32_t zone_off, zone_num;
 	uint32_t num_dirents = inode->size / sizeof(struct dirent);
 	
 	for (i = 0; i < num_dirents; i++) {
 		if (i % comp_f.ent_per_zone == 0) {
 			/* Get location of file's data */
-			zone_off = (inode->zone[index]) * comp_f.zonesize;
+			zone_num = get_zone_num(fp, inode, index);
+			zone_off = zone_num * comp_f.zonesize;
+			
 			if(fseek(fp, fs_start + zone_off, SEEK_SET) < 0) {
 				perror("fseek");
 				exit(-1);
@@ -401,7 +403,7 @@ void output_file(FILE *fp, struct inode *inode, char *hpath){
 	FILE *wp;
     int index = 0;
 	char *buf;
-    uint32_t amnt_read, zone_num;
+    uint32_t amnt_read, zone_num, zone_off;
 	/*uint32_t num_zones = get_num_zones(inode->size);*/
 	uint32_t file_rem = inode->size;
 	
@@ -429,8 +431,9 @@ void output_file(FILE *fp, struct inode *inode, char *hpath){
 		}
 		
 		else {
-			fseek(fp, fs_start + (zone_num * comp_f.zonesize), 
-				SEEK_SET);
+			zone_off = zone_num * comp_f.zonesize;
+			
+			fseek(fp, fs_start + zone_off, SEEK_SET);
 			if (file_rem < comp_f.zonesize) {
 				amnt_read = file_rem;
 			}

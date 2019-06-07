@@ -92,13 +92,16 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
 {
 	struct dirent curr_dir;
     int i, found = 0, index = 0;
-	uint32_t zone_off;
+	uint32_t zone_off, zone_num;
 	uint32_t num_dirents = inode->size / sizeof(struct dirent);
 	
 	for (i = 0; i < num_dirents; i++) {
 		if (i % comp_f.ent_per_zone == 0) {
 			/* Get location of file's data */
-			zone_off = (inode->zone[index]) * comp_f.zonesize;
+			/*zone_off = (inode->zone[index]) * comp_f.zonesize;*/
+			zone_num = get_zone_num(fp, inode, index);
+			zone_off = zone_num * comp_f.zonesize;
+			
 			if(fseek(fp, fs_start + zone_off, SEEK_SET) < 0) {
 				perror("fseek");
 				exit(-1);
@@ -125,6 +128,37 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
 	}
 	
 	return found;	
+}
+
+uint32_t get_zone_num(FILE *fp, struct inode *inode, int index) {
+	uint32_t zone_num;
+	fpos_t pos;
+	
+	fgetpos(fp, &pos);
+	
+	if (index > DIRECT_ZONES - 1) {
+		index -= DIRECT_ZONES;
+		
+		if (index > comp_f.ptrs_per_zone - 1) {
+			/* Do double indirect stuff*/
+			index -= comp_f.ptrs_per_zone;
+			
+		}
+		
+		/* Move to zone pointed to by indirect field */
+		fseek(fp, fs_start + (inode->indirect * comp_f.zonesize), 
+			SEEK_SET);
+		/* Move to specific index location in indirect zone */
+		fseek(fp, index * sizeof(zone_num), SEEK_CUR);
+		fread(&zone_num, sizeof(zone_num), 1, fp);
+	}
+	
+	else {
+		zone_num = inode->zone[index];
+	}
+	
+	fsetpos(fp, &pos);
+	return zone_num;
 }
 
 void bad_dir_err(char *o_path){

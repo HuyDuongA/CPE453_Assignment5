@@ -185,5 +185,6 @@ void bad_file_err(char *mpath);
 void bad_dir_err(char *o_path);
 void check_magic_number();
 int check_if_dir(struct inode *inode);
+uint32_t get_zone_num(FILE *fp, struct inode *inode, int index);
 
 #endif
