@@ -15,7 +15,7 @@ void parse_file_sys(FILE *fp, char* mpath){
     uint32_t imap_offset = 0;
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
-	struct inode root_inode;
+	struct inode inode;
 
     /* parse superblock */ 
     get_sup_block(fp);
@@ -29,46 +29,82 @@ void parse_file_sys(FILE *fp, char* mpath){
     /* parse inode info */
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
     /*get_inode_info(fp, inode_offset);*/
-	get_inode(fp, ROOT_INODE_IDX, &root_inode);
-
+	get_inode(fp, ROOT_INODE_IDX, &inode);
+	
+	traverse_path(fp, mpath, &inode);
+	
 	if (v_flag > 0) {
 		print_stored_fields();
 		print_computed_fields();
-		print_inode(&root_inode);
+		print_inode(&inode);
 	}
 	
-	/*traverse_path(fp, mpath, &root_inode);*/
     if(mpath != NULL){
 	    printf("%s:\n", mpath);
     }
     else{
         printf("/:\n");
     }
-	print_dir(fp, &root_inode);
+	print_dir(fp, &inode);
 }
 
-/*void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
-	const char s[2] = '/';
-	char *file_name;
+void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
+	const char s[2] = {'/'};
+	char *file_name = NULL;
 	struct inode *curr_inode = inode;
-	int i;
-	uint16_t block_size = sup_block.blocksize;
-    int16_t log_zone_size = sup_block.log_zone_size;
-    uint32_t zone_size = block_size * (1 << log_zone_size);
 	
-	file_name = strtok(mpath, s);
+	if (mpath != NULL) {
+		file_name = strtok(mpath, s);
+	}
 	
 	while (file_name != NULL) {
-		for (i = 0; i < DIRECT_ZONES; i++) {
-			zone_num = (curr_inode->zone[i]) * zone_size;
 			
-			if(fseek(fp, fs_start + zone_num, SEEK_SET) < 0){
+		/* Go to that directory file's start of data */
+		if (!get_next_path_inode(fp, file_name, curr_inode)) {
+			bad_file_err(mpath);
+		}
+		
+		file_name = strtok(NULL, s);
+	}	
+}
+
+int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode) {
+	struct dirent curr_dir;
+	struct inode next_inode;
+    int i, found = 0, index = 0;
+	uint32_t zone_off;
+	uint32_t num_dirents = inode->size / sizeof(struct dirent);
+	
+	for (i = 0; i < num_dirents; i++) {
+		if (i % comp_f.ent_per_zone == 0) {
+			/* Get location of file's data */
+			zone_off = (inode->zone[index]) * comp_f.zonesize;
+			if(fseek(fp, fs_start + zone_off, SEEK_SET) < 0) {
 				perror("fseek");
 				exit(-1);
 			}
+			index++;
 		}
-	}	
-}*/
+		
+		if(fread(&curr_dir, sizeof(struct dirent), 1, fp) == 0){
+			perror("fread reads nothing");
+			exit(-1);
+		}
+		
+		if (strcmp((char *)curr_dir.name, file_name) == 0) {
+			get_inode(fp, curr_dir.inode, inode);
+			found = TRUE;
+			break;
+		}
+	}
+	
+	return found;	
+}
+
+void bad_file_err(char *mpath){
+	printf("%s: File not found\n", mpath);
+	exit(-1);
+}
 
 void get_sup_block(FILE *fp){
     if(fseek(fp, fs_start, SEEK_SET) < 0){
@@ -108,8 +144,7 @@ void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset,
 }
    
    
-void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
-        uint32_t inode_offset, FILE *fp)
+void get_computed_field()
 {
     comp_f.version = VERSION;
     comp_f.firstImap = 2;
