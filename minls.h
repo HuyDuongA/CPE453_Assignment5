@@ -182,6 +182,7 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path);
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
     char *o_path);
 void bad_file_err(char *mpath);
+void bad_dir_err(char *o_path);
 void check_magic_number();
 int check_if_dir(struct inode *inode);
 

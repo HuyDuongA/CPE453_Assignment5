@@ -54,7 +54,8 @@ void parse_file_sys(FILE *fp, char* mpath, char* hpath){
 	}
 	
 	else {
-		printf("%s: Not a regular file\n", o_path);
+		fprintf(stderr, "%s: Not a regular file\n", o_path);
+		exit(-1);
 	}
 }
 
@@ -420,22 +421,35 @@ void output_file(FILE *fp, struct inode *inode, char *hpath){
 	
 	while(file_rem > 0) {
 		zone_num = get_zone_num(fp, inode, index);
-		fseek(fp, fs_start + (zone_num * comp_f.zonesize), SEEK_SET);
-		if (file_rem < comp_f.zonesize) {
-			amnt_read = file_rem;
-		}
 		
-		else{
+		if (zone_num == 0) {
+			/* Fill buf with 0's*/
+			memset(buf, 0, comp_f.zonesize);
 			amnt_read = comp_f.zonesize;
 		}
 		
-		fread(buf, amnt_read, 1, fp);
-		fwrite(buf, 1, comp_f.zonesize, wp);
+		else {
+			fseek(fp, fs_start + (zone_num * comp_f.zonesize), 
+				SEEK_SET);
+			if (file_rem < comp_f.zonesize) {
+				amnt_read = file_rem;
+			}
+			
+			else{
+				amnt_read = comp_f.zonesize;
+			}
+			
+			fread(buf, amnt_read, 1, fp);
+		}
+		
+		/* Write to file */
+		fwrite(buf, 1, amnt_read, wp);
 		file_rem -= amnt_read;
 		index++;
 	}
 	
 	fclose(wp);
+	free(buf);
 }
 
 uint32_t get_zone_num(FILE *fp, struct inode *inode, int index) {
@@ -448,14 +462,15 @@ uint32_t get_zone_num(FILE *fp, struct inode *inode, int index) {
 		index -= DIRECT_ZONES;
 		
 		if (index > comp_f.ptrs_per_zone - 1) {
-			/*do double indirect stuff*/
+			/* Do double indirect stuff*/
 			index -= comp_f.ptrs_per_zone;
 			
 		}
 		
 		/* Move to zone pointed to by indirect field */
-		fseek(fp, fs_start + (inode->indirect * comp_f.zonesize), SEEK_SET);
-		/* Move to specific location of indirect zone, specified by index */
+		fseek(fp, fs_start + (inode->indirect * comp_f.zonesize), 
+			SEEK_SET);
+		/* Move to specific index location in indirect zone */
 		fseek(fp, index * sizeof(zone_num), SEEK_CUR);
 		fread(&zone_num, sizeof(zone_num), 1, fp);
 	}
@@ -789,18 +804,17 @@ void mult_part_err(char flag) {
 
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
-	printf("usage: %s  ", prog);
-	printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath [ hostpath ]\n");
-	printf("Options:\n");
-	printf("        -p       part    ");
-	printf("--- select partition for filesystem (default: none)\n");
-	printf("        -s       sub     ");
-	printf("--- select subpartition for filesystem (default: none)\n");
-	printf("        -h       help    ");
-	printf("--- print usage information and exit\n");
-	printf("        -v       verbose ");
-	printf("--- increase verbosity level\n");
-	exit(0);
+	fprintf(stdout, "usage: %s  ", prog);
+    fprintf(stdout, "[ -v ] [ -p num [ -s num ] ] imagefile " 
+        "[ path ]\n");
+    fprintf(stdout, "Options:\n");
+    fprintf(stdout, "\t-p\t part    --- select partition for filesystem " 
+        "(default: none)\n");
+    fprintf(stdout, "\t-s\t sub     --- select subpartition for filesystem " 
+        "(default: none)\n");
+    fprintf(stdout, "\t-h\t help    --- print usage information and exit\n");
+    fprintf(stdout, "\t-v\t verbose --- increase verbosity level\n");
+    exit(-1);
 }
 
 void print_opts(char *imgfile, char *mpath, char *hpath) {
