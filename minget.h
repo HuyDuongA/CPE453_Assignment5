@@ -66,16 +66,16 @@
 #include <time.h>
 
 /* Struct definition for a partition table entry */
-typedef struct __attribute__ ((__packed__)) pt_entry {
-    uint8_t bootind; 			/* Boot magic number*/
-    uint8_t start_head; 		/* Start of partition in CHS */
-    uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-    uint8_t type; 				/* Type of Partition */
-    uint8_t end_head; 			/* End of partition in CHS */
-    uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-    uint32_t lFirst; 			/* First sector (LBA addressing) */
-    uint32_t size; 				/* size of partition*/
-} pt_entry;
+struct __attribute__ ((__packed__)) pt_entry {
+	uint8_t bootind; 			/* Boot magic number*/
+	uint8_t start_head; 		/* Start of partition in CHS */
+	uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
+	uint8_t type; 				/* Type of Partition*/
+	uint8_t end_head; 			/* End of partition in CHS */
+	uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
+	uint32_t lFirst; 			/* First sector*/
+	uint32_t size; 				/* size of partition*/
+};
 
 /* Struct definition for the superblock */
 struct __attribute__ ((__packed__)) superblock {
@@ -133,11 +133,11 @@ struct __attribute__ ((__packed__)) comp_fields {
 
 void minget(char* imgfile, char* mpath, char* hpath);
 void get_start(FILE *fp);
-void parse_pt_entry(FILE *fp, pt_entry *p, int idx);
-void check_valid_part(pt_entry *p);
+void parse_pt_entry(FILE *fp, struct pt_entry *p, int idx);
+void check_valid_part(struct pt_entry *p);
 void check_valid_pt(FILE *fp);
 void print_pt_table(FILE *fp, char p_flag);
-void print_pt_entry(pt_entry *p);
+void print_pt_entry(struct pt_entry *p);
 
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);

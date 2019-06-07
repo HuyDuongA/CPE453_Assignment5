@@ -576,18 +576,18 @@ void get_start(FILE *fp) {
     /*fseek(fp, start, SEEK_SET);*/
 }
 
-void parse_pt_entry(FILE *fp, pt_entry *p, int idx){
+void parse_pt_entry(FILE *fp, struct pt_entry *p, int idx){
     fpos_t pos;
 
     fgetpos(fp, &pos);
-    fseek(fp, PT_START + (idx * sizeof(pt_entry)), SEEK_CUR);
-    fread(p, sizeof(pt_entry), 1, fp);
+    fseek(fp, PT_START + (idx * sizeof(struct pt_entry)), SEEK_CUR);
+    fread(p, sizeof(struct pt_entry), 1, fp);
     fsetpos(fp, &pos);
 
     check_valid_part(p);
 }
 
-void check_valid_part(pt_entry *p) {
+void check_valid_part(struct pt_entry *p) {
     if (p->type != PT_TYPE) {
         /* Change to stderr?? */
         printf("Invalid pt table entry\n");
@@ -631,14 +631,14 @@ void print_pt_table(FILE *fp, char p_flag) {
     fgetpos(fp, &pos);
     fseek(fp, PT_START, SEEK_CUR);
     for (i = 0; i < 4; i++) {
-        fread(&p_info, sizeof(pt_entry), 1, fp);
+        fread(&p_info, sizeof(struct pt_entry), 1, fp);
         print_pt_entry(&p_info);
     }
 
     fsetpos(fp, &pos);
 }
 
-void print_pt_entry(pt_entry *p) {
+void print_pt_entry(struct pt_entry *p) {
 	uint16_t start_sec = (p->start_sec_cyl[0] & 0xc0) << 2;
 	uint16_t end_sec = (p->end_sec_cyl[0] & 0xc0) << 2;
 	
