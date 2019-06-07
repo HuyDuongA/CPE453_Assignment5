@@ -5,7 +5,6 @@ static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
 static struct superblock sup_block;
-/*static struct inode inode_info;*/
 static uint32_t fs_start = 0;
 static uint32_t inode_start = 0;
 static struct comp_fields comp_f;
@@ -36,7 +35,6 @@ void parse_file_sys(FILE *fp, char* mpath){
 
     /* parse inode info */
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
-    /*get_inode_info(fp, inode_offset);*/
 	get_inode(fp, ROOT_INODE_IDX, &inode);
 	
 	traverse_path(fp, mpath, &inode, o_path);
@@ -93,7 +91,6 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
     char *o_path) 
 {
 	struct dirent curr_dir;
-	/*struct inode next_inode;*/
     int i, found = 0, index = 0;
 	uint32_t zone_off;
 	uint32_t num_dirents = inode->size / sizeof(struct dirent);
@@ -223,19 +220,6 @@ void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
 	
 	*i = curr_inode;
 }
-
-/*void get_inode_info(FILE *fp, uint32_t inode_offset){
-    if(fseek(fp, inode_offset, SEEK_SET) < 0){
-        perror("fseek");
-        exit(-1);
-    }
-
-    fprintf(stderr, "Current position of the cursor is %lx\n", ftell(fp));
-    if(fread(&inode_info, sizeof(inode_info), 1, fp) == 0){
-        perror("fread reads nothing");
-        exit(-1);
-    }
-}*/
 
 void print_stored_fields(){
     uint16_t block_size = sup_block.blocksize;
@@ -437,9 +421,6 @@ void print_dir(FILE *fp, struct inode *inode){
 		}
 			
 		get_inode(fp, curr_dir.inode, &curr_inode);
-        /*
-        printf("curr_dir.name = %s\n", curr_dir.name);
-        */
 		print_file(curr_dir.inode, (char *)curr_dir.name, &curr_inode);
 	}
 }
@@ -534,7 +515,6 @@ void parse_pt_entry(FILE *fp, pt_entry *p, int idx){
 }
 
 void check_valid_part(pt_entry *p) {
-    /*print_pt_entry(p);*/
     if (p->type != PT_TYPE) {
         /* Change to stderr?? */
         printf("Invalid pt table entry\n");
@@ -620,32 +600,25 @@ void parse_args(int argc, char *argv[]) {
     while ((flag = getopt (argc, argv, "p:s:vh")) != -1) {
         switch (flag){
             case 'p':
-                /*printf("in p, optarg is %s\n", optarg);*/
                 pval = parse_int(optarg);
                 update_parts(flag, pval);
                 break;
             case 's':
-                /*printf("in s, optarg is %s\n", optarg);*/
                 sval = parse_int(optarg);
                 update_parts(flag, sval);
                 break;
             case 'h':
-                /*printf("in h\n");*/
                 usage_message();
                 break;
             case 'v':
-                /*printf("in v\n");*/
                 update_verbosity();
                 break;
             case '?':
-                /*printf("in ? (WHY!)\n");*/
                 break;
         }
     }
 
-    /*printf("optind %d\n", optind);*/
     for(i = optind; i < argc; i++){    
-        /*printf("argv[%d] = %s\n", optind, argv[optind]);*/
         update_paths(&imgfile, &mpath, argv[i]);
     }
 
@@ -682,17 +655,14 @@ int parse_int(char *arg) {
 /* Updates path values from arg based on what is not defined yet */
 void update_paths(char **imgfile, char **mpath, char *arg){
     if (*imgfile == NULL) {
-        /*printf("adding %s to imgfile\n", arg);*/
         *imgfile = arg;
     }
 
     else if (*mpath == NULL) {
-        /*printf("adding %s to mpath\n", arg);*/
         *mpath = arg;
     }
 
     else {
-        /*printf("in update_paths(), adding %s\n", arg);*/
         usage_message();
     }
 }
@@ -780,6 +750,5 @@ void print_opts(char *imgfile, char *mpath) {
     printf("  opt->imagefile %s\n", imgfile);
     printf("  opt->srcpath   %s\n", mpath);
     printf("  opt->dstpath   (null)\n");
-    /*printf("\n  verbosity-> %d\n", v_flag);*/
 }
 
