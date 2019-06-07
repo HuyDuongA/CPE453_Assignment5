@@ -8,6 +8,7 @@ static struct superblock sup_block;
 /*static struct inode inode_info;*/
 static uint32_t fs_start = 0;
 static uint32_t inode_start = 0;
+static struct comp_fields comp_f;
 
 /* ============ Functions for no partition nor subpartition === */
 void parse_file_sys(FILE *fp, char* mpath){
@@ -15,8 +16,6 @@ void parse_file_sys(FILE *fp, char* mpath){
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
 	struct inode root_inode;
-	/*struct inode path_inode;*/
-    struct comp_fields comp_f;
 
     /* parse superblock */ 
     get_sup_block(fp);
@@ -25,7 +24,7 @@ void parse_file_sys(FILE *fp, char* mpath){
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
 
     /* parse compute */
-    get_computed_field(imap_offset, zmap_offset, inode_offset, &comp_f, fp);
+    get_computed_field();
 
     /* parse inode info */
     get_offsets(&imap_offset, &zmap_offset, &inode_offset);
@@ -34,7 +33,7 @@ void parse_file_sys(FILE *fp, char* mpath){
 
 	if (v_flag > 0) {
 		print_stored_fields();
-		print_computed_fields(comp_f);
+		print_computed_fields();
 		print_inode(&root_inode);
 	}
 	
@@ -110,22 +109,19 @@ void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset,
    
    
 void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
-        uint32_t inode_offset, struct comp_fields *comp_f, FILE *fp)
+        uint32_t inode_offset, FILE *fp)
 {
-    comp_f->version = VERSION;
-    comp_f->firstImap = 2;
-    comp_f->firstZmap = comp_f->firstImap + sup_block.i_blocks;
-    comp_f->firstIblock = comp_f->firstZmap + sup_block.z_blocks;
-    
-    /*TODO fix zonesize */
-    comp_f->zonesize = sup_block.blocksize << sup_block.log_zone_size;
-
-    comp_f->ptrs_per_zone = comp_f->zonesize / sizeof(comp_f->zonesize);
-    comp_f->ino_per_block = sup_block.blocksize/sizeof(struct inode);
-    comp_f->wrongended = 0;
-    comp_f->fileent_size = DIRENT_B_SIZE;
-    comp_f->max_filename = MAX_FN_SIZE;
-    comp_f->ent_per_zone = comp_f->zonesize/sizeof(struct dirent);
+    comp_f.version = VERSION;
+    comp_f.firstImap = 2;
+    comp_f.firstZmap = comp_f.firstImap + sup_block.i_blocks;
+    comp_f.firstIblock = comp_f.firstZmap + sup_block.z_blocks;
+    comp_f.zonesize = sup_block.blocksize << sup_block.log_zone_size;
+    comp_f.ptrs_per_zone = comp_f.zonesize / sizeof(comp_f.zonesize);
+    comp_f.ino_per_block = sup_block.blocksize/sizeof(struct inode);
+    comp_f.wrongended = 0;
+    comp_f.fileent_size = DIRENT_B_SIZE;
+    comp_f.max_filename = MAX_FN_SIZE;
+    comp_f.ent_per_zone = comp_f.zonesize/sizeof(struct dirent);
 }
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
@@ -184,13 +180,13 @@ void print_stored_fields(){
     fprintf(stderr, "  subversion%10d\n", sup_block.subversion);
 }
 
-void print_computed_fields(struct comp_fields comp_f){
+void print_computed_fields(){
     fprintf(stderr, "Computed Fields:\n");
     fprintf(stderr, "  version%13d\n", comp_f.version);
     fprintf(stderr, "  firstImap%11d\n", comp_f.firstImap); 
     fprintf(stderr, "  firstZmap%11d\n", comp_f.firstZmap); 
     fprintf(stderr, "  firstIblock%9d\n", comp_f.firstIblock); 
-    fprintf(stderr, "  zonesize%12d\n", comp_f.firstImap); 
+    fprintf(stderr, "  zonesize%12d\n", comp_f.zonesize); 
     fprintf(stderr, "  ptrs_per_zone%7d\n", comp_f.ptrs_per_zone); 
     fprintf(stderr, "  ino_per_block%7d\n", comp_f.ino_per_block); 
     fprintf(stderr, "  wrongended%10d\n", comp_f.wrongended); 
