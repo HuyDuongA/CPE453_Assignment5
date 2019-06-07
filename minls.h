@@ -131,13 +131,32 @@ struct __attribute__ ((__packed__)) comp_fields {
     uint32_t ent_per_zone;
 };
 
+/* Functions for running minget */
 void minls(char* imgfile, char* mpath);
+void parse_file_sys(FILE *fp, char* mpath);
+void print_dir(FILE *fp, struct inode *inode);
+void print_file(uint32_t inode, char* name, struct inode *curr_inode);
+
+/* Functions for accessing filesystem information */
+void set_o_path(char *m_path, char **o_path);
+void traverse_path(FILE *fp, char* mpath, struct inode *inode, 
+	char *o_path);
+int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
+    char *o_path);
+uint32_t get_zone_num(FILE *fp, struct inode *inode, int index);
+void get_sup_block(FILE *fp);
+void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
+    uint32_t *inode_offset);
+void get_computed_field();
+void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
+void convert_mode_to_string(char *perm_string, struct inode *inode_info);
+void get_owner_perm(char *perm_string, uint16_t mode);
+void get_group_perm(char *perm_string, uint16_t mode);
+void get_other_perm(char *perm_string, uint16_t mode);
+
+/* Functions for getting start of filesystem */
 void get_start(FILE *fp);
 void parse_pt_entry(FILE *fp, pt_entry *p, int idx);
-void check_valid_part(pt_entry *p);
-void check_valid_pt(FILE *fp);
-void print_pt_table(FILE *fp, char p_flag);
-void print_pt_entry(pt_entry *p);
 
 /* Functions for parsing command line arguments */
 void parse_args(int argc, char *argv[]);
@@ -145,46 +164,28 @@ int parse_int(char *arg);
 void update_paths(char **imgfile, char **mpath, char *arg);
 void update_parts(char flag, int val);
 void update_verbosity();
-void check_parts();
-void check_imgfile(char* imgfile);
-void range_part_err(char flag, int val);
-void mult_part_err(char flag);
-void usage_message();
-void print_opts(char *imgfile, char *mpath);
 
-void parse_file_sys(FILE *fp, char* mpath);
-void set_o_path(char* mpath, char** o_path);
-void set_cursor_s_field(FILE *fp);
-void get_sup_block(FILE *fp);
-void get_computed_field();
-
-void get_first_values(FILE *fp, uint32_t imap_offset, 
-        uint32_t zmap_offset, uint32_t inode_offset, uint8_t *firstImap, 
-        uint8_t *firstZmap, uint8_t *firstIblock);
-
-void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset);
-void print_sup_block(uint32_t imap_offset, uint32_t zmap_offset, 
-    uint32_t inode_offset);
-void print_stored_fields();
-void print_inode(struct inode *inode_info);
-void convert_mode_to_string(char *perm_string, struct inode *inode_info);
-void print_computed_fields();
-
-void get_owner_perm(char *perm_string, uint16_t mode);
-void get_group_perm(char *perm_string, uint16_t mode);
-void get_other_perm(char *perm_string, uint16_t mode);
-void print_dir(FILE *fp, struct inode *inode);
-void print_file(uint32_t inode, char* name, struct inode *curr_inode);
-
-void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
-void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path);
-int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
-    char *o_path);
-void bad_file_err(char *mpath);
-void bad_dir_err(char *o_path);
+/* Functions for checking validity of info */
 void check_magic_number();
 int check_if_dir(struct inode *inode);
-uint32_t get_zone_num(FILE *fp, struct inode *inode, int index);
+void check_valid_part(pt_entry *p);
+void check_valid_pt(FILE *fp);
+void check_parts();
+void check_imgfile(char* imgfile);
+
+/* Functions for printing out verbose information */
+void usage_message();
+void print_opts(char *imgfile, char *mpath);
+void print_pt_table(FILE *fp, char p_flag);
+void print_pt_entry(pt_entry *p);
+void print_stored_fields();
+void print_computed_fields();
+void print_inode(struct inode *inode_info);
+
+/* Functions for printing out error messages */
+void bad_dir_err(char *o_path);
+void bad_file_err(char *o_path);
+void range_part_err(char flag, int val);
+void mult_part_err(char flag);
 
 #endif
