@@ -108,8 +108,7 @@ void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset,
 }
    
    
-void get_computed_field(uint32_t imap_offset, uint32_t zmap_offset, 
-        uint32_t inode_offset, FILE *fp)
+void get_computed_field()
 {
     comp_f.version = VERSION;
     comp_f.firstImap = 2;
