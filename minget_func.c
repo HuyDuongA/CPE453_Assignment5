@@ -149,7 +149,8 @@ void mult_part_err(char flag) {
 /* Prints out the usage help message to stdout and exits*/
 void usage_message() {
 	printf("usage: %s  ", prog);
-	printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath [ hostpath ]\n");
+	printf("[ -v ] [ -p num [ -s num ] ] imagefile minixpath"
+        " [ hostpath ]\n");
 	printf("Options:\n");
 	printf("        -p       part    ");
 	printf("--- select partition for filesystem (default: none)\n");

@@ -25,14 +25,14 @@
 
 /* Struct definition for a partition table entry */
 struct __attribute__ ((__packed__)) pt_entry {
-	uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
+	uint8_t bootind; 			/* Boot magic number*/
 	uint8_t start_head; 		/* Start of partition in CHS */
 	uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-	uint8_t type; 				/* Type of Partition (0x81 is MINIX) */
+	uint8_t type; 				/* Type of Partition*/
 	uint8_t end_head; 			/* End of partition in CHS */
 	uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-	uint32_t lFirst; 			/* First sector (LBA addressing) */
-	uint32_t size; 				/* size of partition (in sectors */
+	uint32_t lFirst; 			/* First sector*/
+	uint32_t size; 				/* size of partition*/
 };
 
 /* Struct definition for the superblock */
@@ -71,7 +71,7 @@ struct __attribute__ ((__packed__)) inode {
 /* Struct definition for a directory entry */
 struct __attribute__ ((__packed__)) dirent {
 	uint32_t inode; 	/* inode number */
-	uint8_t name[60]; 	/* filename (nul-terminated if space available) */
+	uint8_t name[60]; 	/* filename */
 };
 
 /* Functions for parsing command line arguments */
