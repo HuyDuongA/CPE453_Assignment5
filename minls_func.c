@@ -42,18 +42,22 @@ void parse_file_sys(FILE *fp, char* mpath){
 	traverse_path(fp, mpath, &inode, o_path);
 	
 	if (v_flag > 0) {
-		print_stored_fields();
-		print_computed_fields();
 		print_inode(&inode);
 	}
 	
-    if(o_path != NULL){
-	    printf("%s:\n", o_path);
-    }
-    else{
-        printf("/:\n");
-    }
-	print_dir(fp, &inode);
+	if (check_if_dir(&inode)) {
+		if(o_path != NULL){
+			printf("%s:\n", o_path);
+		}
+		else{
+			printf("/:\n");
+		}
+		print_dir(fp, &inode);
+	}
+	
+	else {
+		print_file(-1, mpath, &inode);
+	}
 }
 
 void set_o_path(char *m_path, char **o_path){
@@ -78,7 +82,7 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path) {
 	while (file_name != NULL) {
 			
 		/* Go to that directory file's start of data */
-		if (!get_next_path_inode(fp, file_name, curr_inode)) {
+		if (!get_next_path_inode(fp, file_name, curr_inode, o_path)) {
 			bad_file_err(o_path);
 		}
 		
@@ -86,7 +90,9 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path) {
 	}	
 }
 
-int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode) {
+int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
+    char *o_path) 
+{
 	struct dirent curr_dir;
 	/*struct inode next_inode;*/
     int i, found = 0, index = 0;
@@ -110,6 +116,9 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode) {
 		}
 		
 		if (strcmp((char *)curr_dir.name, file_name) == 0) {
+			if (curr_dir.inode == 0) {
+				bad_file_err(o_path);
+			}
 			get_inode(fp, curr_dir.inode, inode);
 			found = TRUE;
 			break;
@@ -119,8 +128,8 @@ int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode) {
 	return found;	
 }
 
-void bad_file_err(char *mpath){
-	printf("%s: File not found\n", mpath);
+void bad_file_err(char *o_path){
+	printf("%s: File not found\n", o_path);
 	exit(-1);
 }
 
@@ -139,6 +148,10 @@ void get_sup_block(FILE *fp){
         perror("fread reads nothing");
         exit(-1);
     }
+	
+	if (v_flag > 0) {
+		print_stored_fields();
+	}
 }
 
 void check_magic_number(){
@@ -175,6 +188,10 @@ void get_computed_field()
     comp_f.fileent_size = DIRENT_B_SIZE;
     comp_f.max_filename = MAX_FN_SIZE;
     comp_f.ent_per_zone = comp_f.zonesize/sizeof(struct dirent);
+	
+	if (v_flag > 0) {
+		print_computed_fields();
+	}
 }
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
@@ -196,7 +213,6 @@ void get_inode(FILE *fp, uint32_t inode_num, struct inode *i){
 	
 	fsetpos(fp, &pos);
 	
-	/*memcpy(i, &curr_inode, sizeof(struct inode));*/
 	*i = curr_inode;
 }
 
@@ -369,41 +385,48 @@ void get_other_perm(char *perm_string, uint16_t mode){
     }
 }
 
-void print_dir(FILE *fp, struct inode *inode_ent){
+int check_if_dir(struct inode *inode) {
+	uint16_t mode = inode->mode;
+    uint16_t type_mask = mode & TYPE_MASK;
+	int dir_check = TRUE;
+	
+    if(type_mask == REG_FILE){
+		dir_check = FALSE;
+	}
+	
+	return dir_check;
+}
+	
+
+void print_dir(FILE *fp, struct inode *inode){
 	struct dirent curr_dir;
 	struct inode curr_inode;
-    int i;
-	uint16_t block_size = sup_block.blocksize;
-    int16_t log_zone_size = sup_block.log_zone_size;
-    uint32_t zone_size = block_size * (1 << log_zone_size);
-	uint32_t zone_num = (inode_ent->zone[0]) * zone_size;
-	uint32_t num_dirents = inode_ent->size / sizeof(struct dirent);
-	
-	/*printf("\nZone Num %d with location %d \nNum of dirents = %d\n", 
-	inode_ent->zone[0], zone_num, num_dirents);*/
-	
-	if(fseek(fp, fs_start, SEEK_SET) < 0){
-			perror("fseek");
-			exit(-1);
-	}
-	
-	if(fseek(fp, zone_num, SEEK_CUR) < 0){
-			perror("fseek");
-			exit(-1);
-	}
-	
-	for (i = 0; i < num_dirents ; i++) {
+    int i, index = 0;
+    uint32_t zone_off;
+	uint32_t num_dirents = inode->size / sizeof(struct dirent);
+		
+	for (i = 0; i < num_dirents; i++) {
+		if (i % comp_f.ent_per_zone == 0) {
+			/* Get location of file's data */
+			zone_off = (inode->zone[index]) * comp_f.zonesize;
+			if(fseek(fp, fs_start + zone_off, SEEK_SET) < 0) {
+				perror("fseek");
+				exit(-1);
+			}
+			index++;
+		}
+			
 		if(fread(&curr_dir, sizeof(struct dirent), 1, fp) == 0){
 			perror("fread reads nothing");
 			exit(-1);
 		}
-		
+			
 		get_inode(fp, curr_dir.inode, &curr_inode);
-		print_file(&curr_dir, &curr_inode);
+		print_file(curr_dir.inode, (char *)curr_dir.name, &curr_inode);
 	}
 }
 
-void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
+void print_file(uint32_t inode, char* name, struct inode *curr_inode) {
 	char perm[11] = {0};
     	
 	/* Deleted file */
@@ -419,10 +442,16 @@ void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
 	
 	printf(" %s\n", curr_dir->name);
     */
-    if(curr_dir->inode != 0){
+    /*if(curr_dir->inode != 0){
 		convert_mode_to_string(perm, curr_inode);
 		printf("%s%10u", perm, curr_inode->size);
 	    printf(" %s\n", curr_dir->name);
+    }*/
+	
+	if(inode != 0){
+		convert_mode_to_string(perm, curr_inode);
+		printf("%s%10u", perm, curr_inode->size);
+	    printf(" %s\n", name);
     }
 }
 
