@@ -4,7 +4,6 @@ static char *prog;
 static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
-/*static struct superblock sup_block;*/
 static uint32_t fs_start = 0;
 static uint32_t inode_start = 0;
 static struct comp_fields comp_f;
@@ -32,7 +31,6 @@ void minget(char* imgfile, char* mpath, char* hpath) {
 
 /* Driver for parsing various needed info in filesystem */
 void parse_file_sys(FILE *fp, char* mpath, char* hpath) {
-    
 	struct inode inode;
 	struct superblock s_block;
     char *o_path;

@@ -144,10 +144,9 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode,
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode,
     char *o_path);
 uint32_t get_zone_num(FILE *fp, struct inode *inode, int index);
-void get_sup_block(FILE *fp);
-void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset);
-void get_computed_field();
+void get_sup_block(FILE *fp, struct superblock *sup_block);
+void get_offsets(struct superblock *sup_block);
+void get_computed_field(struct superblock *sup_block);
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
 void convert_mode_to_string(char *perm_string, struct inode *inode_info);
 void get_owner_perm(char *perm_string, uint16_t mode);
@@ -166,7 +165,7 @@ void update_parts(char flag, int val);
 void update_verbosity();
 
 /* Functions for checking validity of info */
-void check_magic_number();
+void check_magic_number(struct superblock *sup_block);
 int check_if_dir(struct inode *inode);
 void check_valid_part(pt_entry *p);
 void check_valid_pt(FILE *fp);
@@ -178,7 +177,7 @@ void usage_message();
 void print_opts(char *imgfile, char *mpath);
 void print_pt_table(FILE *fp, char p_flag);
 void print_pt_entry(pt_entry *p);
-void print_stored_fields();
+void print_stored_fields(struct superblock* sup_block);
 void print_computed_fields();
 void print_inode(struct inode *inode_info);
 
