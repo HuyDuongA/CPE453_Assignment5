@@ -4,7 +4,7 @@ static char *prog;
 static int partitions = -1;
 static int subpartitions = -1;
 static int v_flag = 0;
-static struct superblock sup_block;
+/*static struct superblock sup_block;*/
 static uint32_t fs_start = 0;
 static uint32_t inode_start = 0;
 static struct comp_fields comp_f;
@@ -32,10 +32,9 @@ void minget(char* imgfile, char* mpath, char* hpath) {
 
 /* Driver for parsing various needed info in filesystem */
 void parse_file_sys(FILE *fp, char* mpath, char* hpath) {
-    uint32_t imap_offset = 0;
-    uint32_t zmap_offset = 0;
-    uint32_t inode_offset = 0;
+    
 	struct inode inode;
+	struct superblock s_block;
     char *o_path;
 
 	/* Store the original path name */
@@ -47,14 +46,14 @@ void parse_file_sys(FILE *fp, char* mpath, char* hpath) {
     }
 
     /* Parse superblock */ 
-    get_sup_block(fp);
-    check_magic_number();
+    get_sup_block(fp, &s_block);
+    check_magic_number(&s_block);
 	
 	/* Compute offsets need to access inode table */
-    get_offsets(&imap_offset, &zmap_offset, &inode_offset);
+    get_offsets(&s_block);
 
     /* Generate computed fields */
-    get_computed_field();
+    get_computed_field(&s_block);
 
     /* Parse root inode info */
 	get_inode(fp, ROOT_INODE_IDX, &inode);
@@ -241,7 +240,7 @@ uint32_t get_zone_num(FILE *fp, struct inode *inode, int index) {
 }
 
 /* Get superblock and prints if -v */
-void get_sup_block(FILE *fp) {
+void get_sup_block(FILE *fp, struct superblock *sup_block) {
     if(fseek(fp, fs_start, SEEK_SET) < 0){
         perror("fseek");
         exit(-1);
@@ -252,37 +251,38 @@ void get_sup_block(FILE *fp) {
         exit(-1);
     }
 
-    if(fread(&sup_block, sizeof(sup_block), 1, fp) == 0){
+    if(fread(sup_block, sizeof(struct superblock), 1, fp) == 0){
         perror("fread reads nothing");
         exit(-1);
     }
 	
 	if (v_flag > 0) {
-		print_stored_fields();
+		print_stored_fields(sup_block);
 	}
 }
 
 /* Computes inode_start based on offsets */
-void get_offsets(uint32_t *imap_offset, uint32_t *zmap_offset, 
-    uint32_t *inode_offset) {
-		
-	uint16_t blocksize = sup_block.blocksize;
+void get_offsets(struct superblock *sup_block) {
+	uint32_t imap_offset = 0;
+    uint32_t zmap_offset = 0;
+    uint32_t inode_offset = 0;
+	uint16_t blocksize = sup_block->blocksize;
 	
-	*imap_offset = fs_start + 2 * blocksize;
-	*zmap_offset = *imap_offset + sup_block.i_blocks * blocksize;
-	*inode_offset = *zmap_offset + sup_block.z_blocks * blocksize;
-	inode_start = *inode_offset;
+	imap_offset = fs_start + 2 * blocksize;
+	zmap_offset = imap_offset + sup_block->i_blocks * blocksize;
+	inode_offset = zmap_offset + sup_block->z_blocks * blocksize;
+	inode_start = inode_offset;
 }
    
 /* Computes computed fields and prints if -v */
-void get_computed_field() {
+void get_computed_field(struct superblock *sup_block) {
     comp_f.version = VERSION;
     comp_f.firstImap = 2;
-    comp_f.firstZmap = comp_f.firstImap + sup_block.i_blocks;
-    comp_f.firstIblock = comp_f.firstZmap + sup_block.z_blocks;
-    comp_f.zonesize = sup_block.blocksize << sup_block.log_zone_size;
+    comp_f.firstZmap = comp_f.firstImap + sup_block->i_blocks;
+    comp_f.firstIblock = comp_f.firstZmap + sup_block->z_blocks;
+    comp_f.zonesize = sup_block->blocksize << sup_block->log_zone_size;
     comp_f.ptrs_per_zone = comp_f.zonesize / sizeof(comp_f.zonesize);
-    comp_f.ino_per_block = sup_block.blocksize/sizeof(struct inode);
+    comp_f.ino_per_block = sup_block->blocksize/sizeof(struct inode);
     comp_f.wrongended = 0;
     comp_f.fileent_size = DIRENT_B_SIZE;
     comp_f.max_filename = MAX_FN_SIZE;
@@ -569,11 +569,11 @@ void update_verbosity() {
 /* ===== Functions for checking validity of info ===== */
 
 /* Checks if image is a valid MINIX filesystem */
-void check_magic_number() {
-    if(sup_block.magic != MINIX_MAGIC_NUM){
+void check_magic_number(struct superblock *sup_block) {
+    if(sup_block->magic != MINIX_MAGIC_NUM){
         fprintf(stderr, "Bad magic number. (0x%.4x)\n"
                 "This doesn't look like a MINIX filesystem.\n", 
-                sup_block.magic);
+                sup_block->magic);
         exit(-1);
     }
 }
@@ -714,24 +714,24 @@ void print_pt_entry(pt_entry *p) {
 }
 
 /* Prints out the stored fields portion of the superblock */
-void print_stored_fields() {
-    uint16_t block_size = sup_block.blocksize;
-    int16_t log_zone_size = sup_block.log_zone_size;
+void print_stored_fields(struct superblock* sup_block) {
+    uint16_t block_size = sup_block->blocksize;
+    int16_t log_zone_size = sup_block->log_zone_size;
     uint32_t zone_size = block_size * (1 << log_zone_size);
 
     fprintf(stderr, "\nSuperblock Contents:\n");
     fprintf(stderr, "Stored Fields:\n");
-    fprintf(stderr, "  ninodes%13d\n", sup_block.ninodes);
-    fprintf(stderr, "  i_blocks%12d\n", sup_block.i_blocks);
-    fprintf(stderr, "  z_blocks%12d\n", sup_block.z_blocks);
-    fprintf(stderr, "  firstdata%11d\n", sup_block.firstdata);
+    fprintf(stderr, "  ninodes%13d\n", sup_block->ninodes);
+    fprintf(stderr, "  i_blocks%12d\n", sup_block->i_blocks);
+    fprintf(stderr, "  z_blocks%12d\n", sup_block->z_blocks);
+    fprintf(stderr, "  firstdata%11d\n", sup_block->firstdata);
     fprintf(stderr, "  log_zone_size%7d (zone size: %d)\n", 
             log_zone_size, zone_size);
-    fprintf(stderr, "  max_file%12u\n", sup_block.max_file);
-    fprintf(stderr, "  magic         0x""%x\n", sup_block.magic);
-    fprintf(stderr, "  zones%15d\n", sup_block.zones);
-    fprintf(stderr, "  blocksize%11d\n", sup_block.blocksize);
-    fprintf(stderr, "  subversion%10d\n", sup_block.subversion);
+    fprintf(stderr, "  max_file%12u\n", sup_block->max_file);
+    fprintf(stderr, "  magic         0x""%x\n", sup_block->magic);
+    fprintf(stderr, "  zones%15d\n", sup_block->zones);
+    fprintf(stderr, "  blocksize%11d\n", sup_block->blocksize);
+    fprintf(stderr, "  subversion%10d\n", sup_block->subversion);
 }
 
 /* Prints out the computed fields */
