@@ -16,6 +16,14 @@ void parse_file_sys(FILE *fp, char* mpath){
     uint32_t zmap_offset = 0;
     uint32_t inode_offset = 0;
 	struct inode inode;
+    char *o_path;
+
+    if(mpath != NULL){
+        set_o_path(mpath, &o_path);
+    }
+    else{
+        o_path = NULL;
+    }
 
     /* parse superblock */ 
     get_sup_block(fp);
@@ -31,7 +39,7 @@ void parse_file_sys(FILE *fp, char* mpath){
     /*get_inode_info(fp, inode_offset);*/
 	get_inode(fp, ROOT_INODE_IDX, &inode);
 	
-	traverse_path(fp, mpath, &inode);
+	traverse_path(fp, mpath, &inode, o_path);
 	
 	if (v_flag > 0) {
 		print_stored_fields();
@@ -39,8 +47,8 @@ void parse_file_sys(FILE *fp, char* mpath){
 		print_inode(&inode);
 	}
 	
-    if(mpath != NULL){
-	    printf("%s:\n", mpath);
+    if(o_path != NULL){
+	    printf("%s:\n", o_path);
     }
     else{
         printf("/:\n");
@@ -48,7 +56,17 @@ void parse_file_sys(FILE *fp, char* mpath){
 	print_dir(fp, &inode);
 }
 
-void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
+void set_o_path(char *m_path, char **o_path){
+    int len = strlen(m_path);
+
+    *o_path = calloc(1, len);
+    if(*o_path == NULL){
+        perror("calloc");
+        exit(-1);
+    }
+    memcpy(*o_path, m_path, len);
+}
+void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path) {
 	const char s[2] = {'/'};
 	char *file_name = NULL;
 	struct inode *curr_inode = inode;
@@ -61,7 +79,7 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
 			
 		/* Go to that directory file's start of data */
 		if (!get_next_path_inode(fp, file_name, curr_inode)) {
-			bad_file_err(mpath);
+			bad_file_err(o_path);
 		}
 		
 		file_name = strtok(NULL, s);
@@ -70,7 +88,7 @@ void traverse_path(FILE *fp, char* mpath, struct inode *inode) {
 
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode) {
 	struct dirent curr_dir;
-	struct inode next_inode;
+	/*struct inode next_inode;*/
     int i, found = 0, index = 0;
 	uint32_t zone_off;
 	uint32_t num_dirents = inode->size / sizeof(struct dirent);

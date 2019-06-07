@@ -67,14 +67,14 @@
 
 /* Struct definition for a partition table entry */
 typedef struct __attribute__ ((__packed__)) pt_entry {
-    uint8_t bootind; 			/* Boot magic number (0x80 if bootable) */
+    uint8_t bootind; 			/* Boot magic number*/
     uint8_t start_head; 		/* Start of partition in CHS */
     uint8_t start_sec_cyl[2]; 	/* See note on sec_cyl addressing */
-    uint8_t type; 				/* Type of Partition (0x81 is MINIX) */
+    uint8_t type; 				/* Type of Partition */
     uint8_t end_head; 			/* End of partition in CHS */
     uint8_t end_sec_cyl[2]; 	/* See note on sec_cyl addressing */
     uint32_t lFirst; 			/* First sector (LBA addressing) */
-    uint32_t size; 				/* size of partition (in sectors */
+    uint32_t size; 				/* size of partition*/
 } pt_entry;
 
 /* Struct definition for the superblock */
@@ -153,6 +153,7 @@ void usage_message();
 void print_opts(char *imgfile, char *mpath);
 
 void parse_file_sys(FILE *fp, char* mpath);
+void set_o_path(char* mpath, char** o_path);
 void set_cursor_s_field(FILE *fp);
 void get_sup_block(FILE *fp);
 void get_computed_field();
@@ -177,7 +178,7 @@ void print_dir(FILE *fp, struct inode *inode_ent);
 void print_file(struct dirent *curr_dir, struct inode *curr_inode);
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
-void traverse_path(FILE *fp, char* mpath, struct inode *inode);
+void traverse_path(FILE *fp, char* mpath, struct inode *inode, char *o_path);
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode);
 void bad_file_err(char *mpath);
 void check_magic_number();
