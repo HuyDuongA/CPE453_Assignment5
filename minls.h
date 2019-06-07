@@ -174,12 +174,13 @@ void get_owner_perm(char *perm_string, uint16_t mode);
 void get_group_perm(char *perm_string, uint16_t mode);
 void get_other_perm(char *perm_string, uint16_t mode);
 void print_dir(FILE *fp, struct inode *inode);
-void print_file(struct dirent *curr_dir, struct inode *curr_inode);
+void print_file(uint32_t inode, char* name, struct inode *curr_inode);
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);
 void traverse_path(FILE *fp, char* mpath, struct inode *inode);
 int get_next_path_inode(FILE *fp, char *file_name, struct inode *inode);
 void bad_file_err(char *mpath);
 void check_magic_number();
+int check_if_dir(struct inode *inode);
 
 #endif
