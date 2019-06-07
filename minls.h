@@ -173,7 +173,7 @@ void print_computed_fields();
 void get_owner_perm(char *perm_string, uint16_t mode);
 void get_group_perm(char *perm_string, uint16_t mode);
 void get_other_perm(char *perm_string, uint16_t mode);
-void print_dir(FILE *fp, struct inode *inode_ent);
+void print_dir(FILE *fp, struct inode *inode);
 void print_file(struct dirent *curr_dir, struct inode *curr_inode);
 
 void get_inode(FILE *fp, uint32_t inode_num, struct inode *i);

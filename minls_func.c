@@ -351,20 +351,34 @@ void get_other_perm(char *perm_string, uint16_t mode){
     }
 }
 
-void print_dir(FILE *fp, struct inode *inode_ent){
+void print_dir(FILE *fp, struct inode *inode){
 	struct dirent curr_dir;
 	struct inode curr_inode;
-    int i;
-	uint16_t block_size = sup_block.blocksize;
-    int16_t log_zone_size = sup_block.log_zone_size;
-    uint32_t zone_size = block_size * (1 << log_zone_size);
-	uint32_t zone_num = (inode_ent->zone[0]) * zone_size;
-	uint32_t num_dirents = inode_ent->size / sizeof(struct dirent);
+    int i, index = 0;
+    uint32_t zone_off;
+	uint32_t num_dirents = inode->size / sizeof(struct dirent);
 	
-	/*printf("\nZone Num %d with location %d \nNum of dirents = %d\n", 
-	inode_ent->zone[0], zone_num, num_dirents);*/
+	for (i = 0; i < num_dirents; i++) {
+		if (i % comp_f.ent_per_zone == 0) {
+			/* Get location of file's data */
+			zone_off = (inode->zone[index]) * comp_f.zonesize;
+			if(fseek(fp, fs_start + zone_off, SEEK_SET) < 0) {
+				perror("fseek");
+				exit(-1);
+			}
+			index++;
+		}
+		
+		if(fread(&curr_dir, sizeof(struct dirent), 1, fp) == 0){
+			perror("fread reads nothing");
+			exit(-1);
+		}
+		
+		get_inode(fp, curr_dir.inode, &curr_inode);
+		print_file(&curr_dir, &curr_inode);
+	}
 	
-	if(fseek(fp, fs_start, SEEK_SET) < 0){
+	/*if(fseek(fp, fs_start, SEEK_SET) < 0){
 			perror("fseek");
 			exit(-1);
 	}
@@ -382,7 +396,7 @@ void print_dir(FILE *fp, struct inode *inode_ent){
 		
 		get_inode(fp, curr_dir.inode, &curr_inode);
 		print_file(&curr_dir, &curr_inode);
-	}
+	}*/
 }
 
 void print_file(struct dirent *curr_dir, struct inode *curr_inode) {
